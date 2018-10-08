@@ -1,0 +1,28 @@
+{
+  "name": "demo1",
+  "author": {
+    "name": [
+      "Yagamy"
+    ],
+    "email": "yagamy@gmail.com"
+  },
+  "description": "A demo for peripheral-service in SensorWeb3 plugin framework",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "main": "lib/index.js",
+  "engines": {
+    "node": "0.10.x",
+    "npm": "1.4.x"
+  },
+  "dependencies": {
+    "async": "*"
+  },
+  "scripts": {
+    "build": "find src -name '*.ls' | xargs -I{} sh -c \"echo compiling {} ...; cat {} | lsc -cp > lib/\\$(basename {} .ls).js\""
+  },
+  "devDependencies": {},
+  "optionalDependencies": {}
+}
