@@ -1,0 +1,133 @@
+#!/bin/bash
+#
+
+function err_exit {
+	local CODE=$1
+	shift
+	[ "0" != "${CODE}" ] && echo "$@" && exit ${CODE}
+}
+
+function cat_conf_get_value {
+	[ ! -f "$0.yml" ] && return
+	[ "" == "$1" ] && return
+	local VALUE=$(cat "$0.yml" | shyaml get-value $1)
+	echo ${VALUE}
+}
+
+function run_agent_server {
+	local BLEMO_SERVICE_ENABLED=$(cat_conf_get_value BLEMO_SERVICE_ENABLED)
+	local TIC_HUB_SERVER=$(cat_conf_get_value TIC_HUB_SERVER)
+	local TIC_DM_SERVER=$(cat_conf_get_value TIC_DM_SERVER)
+
+	echo "BLEMO_SERVICE_ENABLED => ${BLEMO_SERVICE_ENABLED}"
+	echo "TIC_HUB_SERVER => ${TIC_HUB_SERVER}"
+	echo "TIC_DM_SERVER => ${TIC_DM_SERVER}"
+
+	if [ "false" == "$(cat_conf_get_value BLEMO_SERVICE_ENABLED | tr '[A-Z]' '[a-z]')" ]; then
+		local EXTRA_BLEMO_OPTS="-o \"sensorweb3-client.wss.client_opts={}\""
+	fi
+
+	[ "" != ${TIC_HUB_SERVER} ] && local EXTRA_TIC_HUB_OPTS="-s \"tic-client.dg.hub=${TIC_HUB_SERVER}\""
+	[ "" != ${TIC_DM_SERVER} ] && local EXTRA_TIC_DM_OPTS="-s \"tic-client.dm.server=${TIC_DM_SERVER}\""
+
+	${SCRIPT_DIR}/start-yapps-docker \
+		toe-agent \
+		6020 \
+		${PLUGIN_DIR} \
+		YAPPS_EXTRA_AGENTS \
+		${EXTRA_BLEMO_OPTS} \
+		${EXTRA_TIC_HUB_OPTS} \
+		${EXTRA_TIC_DM_OPTS} \
+		"$@"
+}
+
+function run_with_remote_box {
+	local REMOTE=$1; shift
+	[ "" == "${REMOTE}" ] && echo "please specify remote ip address" && exit 1
+	local EXIT_CODE="0"
+
+	##
+	# Checking the existence of remote box
+	#
+	ping -t1 -c1 ${REMOTE} > /dev/null 2>&1; EXIT_CODE=$?
+	err_exit ${EXIT_CODE} "unable to ping ${REMOTE}, please check the status of remote box"
+	echo "${REMOTE} is alive"
+
+	##
+	# Checking SSH service is available on the remote box.
+	#
+	nc -w 1 -zv ${REMOTE} 22 > /dev/null 2>&1; EXIT_CODE=$?
+	err_exit ${EXIT_CODE} "port 22 of ${REMOTE} is not opened"
+	echo "${REMOTE} port 22 is ready"
+
+	##
+	# Checking which user account shall be used to
+	# access remote box: `$(whoami)` or `root`
+	#
+	export REMOTE_USER=$(whoami)
+	ssh -oBatchMode=yes ${REMOTE_USER}@${REMOTE} "uname -a" > /dev/null 2>&1; EXIT_CODE=$?
+	if [ "0" != "${EXIT_CODE}" ]; then
+		USER="root"
+		ssh -oBatchMode=yes ${REMOTE_USER}@${REMOTE} "uname -a" > /dev/null 2>&1; EXIT_CODE=$?
+		err_exit "${EXIT_CODE}" "either $(whoami) or root is not allowed to SSH login ${REMOTE}"
+	fi
+	echo "${REMOTE} with user ${REMOTE_USER} to login SSH service"
+
+	##
+	# Get `/tmp/ttt_system` file from remote box.
+	#
+	local TMP_FILE="/tmp/$(date +%s)"
+	scp ${REMOTE_USER}@${REMOTE}:/tmp/ttt_system ${TMP_FILE} > /dev/null 2>&1; EXIT_CODE=$?
+	err_exit ${EXIT_CODE} "failed to get /tmp/ttt_system"
+	echo "${REMOTE}:/tmp/ttt_system is downloaded =>"
+	cat ${TMP_FILE} | awk '{printf "\t%s\n", $0}'
+
+	##
+	# Get PROFILE from `/tmp/ttt_system`.
+	#
+	local GREP_RE_OPTS="-P"
+	[ "darwin" == "$(uname -s | tr '[A-Z]' '[a-z]')" ] && GREP_RE_OPTS="-E"
+	export REMOTE_PROFILE=$(cat ${TMP_FILE} | grep ${GREP_RE_OPTS} "^profile\t" | awk -F'\t' '{print $2}')
+	rm -f ${TMP_FILE}
+	echo "${REMOTE}/profile => ${REMOTE_PROFILE}"
+
+	run_agent_server \
+		-s "system-info.remote=${REMOTE}" \
+		-s "communicator.connections.ps_s_data.url=tcp://${REMOTE}:6022" \
+		-s "communicator.connections.ps_p_data.url=tcp://${REMOTE}:6023" \
+		-s "sensorweb3-client.wss.server=http://${REMOTE}:6020" \
+		-s "sensorweb3-client.wss.token=ABCD" \
+		"$@"
+}
+
+function fn_exist {
+	declare -f -F $1 > /dev/null
+	return $?
+}
+
+function wrapper {
+	[ "" == "$(which shyaml)" ] && echo "please install shyaml first" && exit 1
+	local OS_NAME=$(uname -s | tr '[A-Z]' '[a-z]')
+	local READLINK_OPTS=""
+	[ "darwin" == "${OS_NAME}" ] || READLINK_OPTS="-f"
+	local CURRENT=$(pwd)
+	local SCRIPT_CURRENT_NAME=$(basename $0)
+	local SCRIPT_BASE_NAME=$(basename $(readlink ${READLINK_OPTS} $0))
+	local SCRIPT_SUBCOMMAND=$(echo ${SCRIPT_CURRENT_NAME} | sed "s/${SCRIPT_BASE_NAME}-//g")
+	local FUNC="run_$(echo ${SCRIPT_SUBCOMMAND} | tr '-' '_')"
+	echo "SCRIPT_CURRENT_NAME = ${SCRIPT_CURRENT_NAME}"
+	echo "SCRIPT_BASE_NAME = ${SCRIPT_BASE_NAME}"
+	echo "SCRIPT_SUBCOMMAND = ${SCRIPT_SUBCOMMAND}"
+	echo "FUNC = ${FUNC}"
+
+	local CURRENT=$(pwd)
+	cd $(dirname $0)
+	export PLUGIN_DIR=$(pwd)
+	cd $(dirname $(readlink ${READLINK_OPTS} $0))
+	export SCRIPT_DIR=$(pwd)
+	cd ${CURRENT}
+
+	fn_exist ${FUNC} && ${FUNC} $@ || echo "no such function: ${FUNC}"
+}
+
+wrapper $@

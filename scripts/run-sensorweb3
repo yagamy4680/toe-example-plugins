@@ -1,0 +1,145 @@
+#!/bin/bash
+#
+
+function generate_sensorweb3_communicator_connection {
+cat <<__EOF__
+{
+  "enabled": true,
+  "url": "tcp://$1:$2",
+  "channel": null,
+  "broadcast": false
+}
+__EOF__
+}
+
+function generate_sensorweb3_sock {
+cat <<__EOF__
+{
+  "uri": "tcp://0.0.0.0:10000",
+  "line": true
+}
+__EOF__
+}
+
+function generate_sensorweb3_tcp_proxy_bridge {
+cat <<__EOF__
+{
+  "metadata": {
+    "guess": false,
+    "defaults": {
+      "device": "remote",
+      "app": "$1"
+    }
+  }
+}
+__EOF__
+}
+
+function run_sensorweb3 {
+	CONF=$0.yml \
+		${SCRIPT_DIR}/start-yapps-docker \
+			sensor-web3 \
+			6020,6021,6022,6023,6024 \
+			${PLUGIN_DIR} \
+			YAPPS_EXTRA_PLUGINS \
+			"$@"
+}
+
+function echoerr {
+	echo "$@" 1>&2;
+}
+
+function transform_address {
+	local ADDR=$1
+	if [ "127.0.0.1" == "${ADDR}" ]; then
+		if [ "darwin" == "${OS_NAME}" ]; then
+			ADDR=$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
+			echoerr "replace 127.0.0.1 with ${ADDR} for container to access"
+		else
+			ADDR=$(ifconfig | grep "^eth" | head -n1  | awk '{print $1}' | xargs -I{} sh -c "ifconfig {}" | grep "inet addr" | awk '{print $2}' | awk -F':' '{print $2}')
+			echoerr "replace 127.0.0.1 with ${ADDR} for container to access"
+		fi
+	fi
+	echo ${ADDR}
+}
+
+function run_with_remote_uart {
+	local ADDR=$1; shift
+	[ "" == "${ADDR}" ] && echo "please specify ip address of remote UART Tcp server" && exit 1
+	[ "" == "${PORT}" ] && PORT="10001"
+	ADDR=$(transform_address ${ADDR})
+	run_sensorweb3 \
+		-b "communicator.connections.sb0.enabled=true" \
+		-s "communicator.connections.sb0.url=tcp://${ADDR}:${PORT}" \
+		$@
+}
+
+function run_with_extra_tcp {
+	local NAME=$1; shift
+	local ADDR=$1; shift
+	local PORT=$1; shift
+	[ "" == "${NAME}" ] && echo "please specify name for the extra tcp connection" && exit 1
+	[ "" == "${ADDR}" ] && echo "please specify remote ip address for the extra tcp connection to connect" && exit 1
+	[ "" == "${PORT}" ] && echo "please specify remote port number for the extra tcp connection to connect" && exit 1
+	ADDR=$(transform_address ${ADDR})
+
+	local OPT1="^communicator.connections.${NAME}:$(generate_sensorweb3_communicator_connection ${ADDR} ${PORT} | base64 ${BASE64_OPTS})"
+	local OPT2="^sock.servers.${NAME}:$(generate_sensorweb3_sock | base64 ${BASE64_OPTS})"
+	local OPT3="^tcp-proxy.bridges.${NAME}:$(generate_sensorweb3_tcp_proxy_bridge ${NAME} | base64 ${BASE64_OPTS})"
+	local OPT_ADVANCED="-b \"ps-manager.handlers.console.enabled=true\""
+
+	echo "-o ${OPT1}"
+	echo "-o ${OPT2}"
+	echo "-o ${OPT3}"
+	echo "${OPT_ADVANCED}"
+
+	run_sensorweb3 \
+		-o ${OPT1} \
+		-o ${OPT2} \
+		-o ${OPT3} \
+		${OPT_ADVANCED} \
+		$@
+
+	#local CONFS=($(find ${PLUGIN_DIR}/confs -type f -name '*.ls'))
+	#for c in "${CONFS[@]}"; do
+	#	echo "-o '$(basename $c).${NAME}=$(cat $c | lsc -cjp | base64)'"
+	#done
+}
+
+function run_standalone {
+	run_sensorweb3 "$@"
+}
+
+function fn_exist {
+	declare -f -F $1 > /dev/null
+	return $?
+}
+
+function wrapper {
+	export OS_NAME=$(uname -s | tr '[A-Z]' '[a-z]')
+	local READLINK_OPTS=""
+	if [ "darwin" != "${OS_NAME}" ]; then
+		READLINK_OPTS="-f"
+		BASE64_OPTS="-w 0"
+	fi
+	local CURRENT=$(pwd)
+	local SCRIPT_CURRENT_NAME=$(basename $0)
+	local SCRIPT_BASE_NAME=$(basename $(readlink ${READLINK_OPTS} $0))
+	local SCRIPT_SUBCOMMAND=$(echo ${SCRIPT_CURRENT_NAME} | sed "s/${SCRIPT_BASE_NAME}-//g")
+	local FUNC="run_$(echo ${SCRIPT_SUBCOMMAND} | tr '-' '_')"
+	echo "SCRIPT_CURRENT_NAME = ${SCRIPT_CURRENT_NAME}"
+	echo "SCRIPT_BASE_NAME = ${SCRIPT_BASE_NAME}"
+	echo "SCRIPT_SUBCOMMAND = ${SCRIPT_SUBCOMMAND}"
+	echo "FUNC = ${FUNC}"
+
+	local CURRENT=$(pwd)
+	cd $(dirname $0)
+	export PLUGIN_DIR=$(pwd)
+	cd $(dirname $(readlink ${READLINK_OPTS} $0))
+	export SCRIPT_DIR=$(pwd)
+	cd ${CURRENT}
+
+	fn_exist ${FUNC} && ${FUNC} $@ || echo "no such function: ${FUNC}"
+}
+
+wrapper $@

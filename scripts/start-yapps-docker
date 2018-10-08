@@ -1,0 +1,131 @@
+#!/bin/bash
+#
+
+function init_variables {
+	export APP_NAME=$1
+	export APP_PORTS=$2
+	export PLUGIN_DIR=$3
+	export PLUGIN_ENV_NAME=$4
+	[ "" == "${APP_NAME}" ] && echo "please specify app name to run" && exit 1
+	[ "" == "${APP_PORTS}" ] && echo "please specify the port numbers to be exposed" && exit 2
+	[ "" == "${PLUGIN_DIR}" ] && echo "please specify plugin directory" && exit 3
+	[ "" == "${PLUGIN_ENV_NAME}" ] && echo "please specify plugin environment variable name" && exit 4
+
+	[ "" == "${YAPPS_DUMP_LOADED_CONFIG}" ] && export YAPPS_DUMP_LOADED_CONFIG="false"
+
+	export PLUGIN_NAME=$(basename ${PLUGIN_DIR})
+	export CONTAINER_NAME="${APP_NAME}-test-$(date '+%m%d-%H%M%S')"
+	export DOCKER_IMAGE_NAME="tictactoe/yapps.${APP_NAME}"
+	export DOCKER_IMAGE_VERSION=$(cat_conf_get_value DOCKER_IMAGE_VERSION latest)
+	export LAUNCH_SCRIPT="/tmp/run-docker-${APP_NAME}"
+
+	export ENV_OPT_DUMP_CONF="YAPPS_DUMP_LOADED_CONFIG=${YAPPS_DUMP_LOADED_CONFIG}"
+	export ENV_OPT_PLUGIN="${PLUGIN_ENV_NAME}=/opt/${PLUGIN_NAME}"
+	[ "true" == "${LIVESCRIPT}" ] && export ENV_OPT_PLUGIN="${ENV_OPT_PLUGIN}/src"
+}
+
+function cat_conf_get_value {
+	[ "" == "$1" ] && return 1
+	[ "" == "$2" ] && return 1
+	[ ! -f "${CONF}" ] && echo $2 && return 0
+	local VALUE=$(cat "${CONF}" | shyaml get-value $1)
+	[ "0" != "$?" ] && echo $2 || echo ${VALUE}
+}
+
+function show_plugin_config_files {
+	IFS=$'\n'
+	local CONFIGS=($(env | sort | grep "^YAPPS_PLUGIN_CONFIG_FILE_"))
+	unset IFS
+	local FIRST="true"
+	for c in "${CONFIGS[@]}"; do
+		local NAME=$(echo $c | awk -F'=' '{print $1}')
+		local FILEPATH=$(echo $c | awk -F'=' '{print $2}')
+		if [ -f "${FILEPATH}" ]; then
+			local NEW_FILEPATH="/tmp/$(basename ${FILEPATH})"
+			cp ${FILEPATH} ${NEW_FILEPATH}
+			if [ "true" == "${FIRST}" ]; then
+				FIRST="false"
+			else
+				echo -ne "\\\\\n\t"
+			fi
+			echo -ne "-e ${NAME}=${NEW_FILEPATH} -v ${NEW_FILEPATH}:${NEW_FILEPATH}"
+		fi
+	done
+}
+
+function show_plugin_config_pathes {
+	IFS=$'\n'
+	local CONFIGS=($(env | sort | grep "^YAPPS_PLUGIN_CONFIG_PATH_"))
+	unset IFS
+	local FIRST="true"
+	local CURRENT=$(pwd)
+	for c in "${CONFIGS[@]}"; do
+		local NAME=$(echo $c | awk -F'=' '{print $1}')
+		local DIR=$(echo $c | awk -F'=' '{print $2}')
+		if [ -d "${DIR}" ]; then
+			[ "true" == "${FIRST}" ] && FIRST="false" || echo -ne "\\\\\n\t"
+			cd ${DIR}
+			local FULLPATH=$(pwd)
+			cd ${CURRENT}
+			echo -ne "-e ${NAME}=${FULLPATH} -v ${FULLPATH}:${FULLPATH}"
+		fi
+	done
+}
+
+function show_plugin_env_variables {
+	IFS=$'\n'
+	local ENVS=($(env | sort | grep "^YAPPS_PLUGIN_ENV_"))
+	unset IFS
+	local FIRST="true"
+	for e in "${ENVS[@]}"; do
+		local NAME=$(echo $e | awk -F'=' '{print $1}')
+		local VALUE=$(echo $e | awk -F'=' '{print $2}')
+		if [ "true" == "${FIRST}" ]; then
+			FIRST="false"
+		else
+			echo -ne "\\\\\n\t"
+		fi
+		echo -ne "-e ${NAME}=\"${VALUE}\""
+	done
+}
+
+function generate_script {
+cat <<__EOF__ > ${LAUNCH_SCRIPT}
+#!/bin/bash
+#
+docker run \\
+	-it \\
+	--init \\
+	--rm \\
+	--name ${CONTAINER_NAME} \\
+	${CONTAINER_PORT_OPTS} \\
+	-v ${PLUGIN_DIR}:/opt/${PLUGIN_NAME} \\
+	-e ${ENV_OPT_DUMP_CONF} \\
+	-e ${ENV_OPT_PLUGIN} \\
+	$(show_plugin_config_pathes) \\
+	$(show_plugin_config_files) \\
+	${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_VERSION} \\
+		node \\
+			--expose-gc \\
+			index.js \\
+				-v \\
+				$@
+__EOF__
+}
+
+function run_with_docker {
+	local TMP_FILE=$(mktemp /tmp/XXXXXX)
+	echo ${APP_PORTS} | tr ',' '\n' > ${TMP_FILE}
+	local CONTAINER_PORT_OPTS=$(cat ${TMP_FILE} | awk '{printf "-p %s:%s\n", $1, $1}' | tr '\n' ' ')
+	rm -f ${TMP_FILE}
+	generate_script $@
+	echo "launch script: "
+	echo ""
+	cat ${LAUNCH_SCRIPT}
+	echo ""
+	$BASH ${LAUNCH_SCRIPT}
+}
+
+init_variables $@
+shift; shift; shift; shift
+run_with_docker $@
