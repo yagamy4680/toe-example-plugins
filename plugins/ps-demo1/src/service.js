@@ -1,3 +1,5 @@
+var os = require('os');
+
 /**
  * Get logger apis in SensorWeb3
  */
@@ -14,9 +16,7 @@ var { PeripheralService, express, bodyParser } = global.getBundledModules();
 const { RELATIONSHIP_NONE, RELATIONSHIP_CONFIGURED, RELATIONSHIP_MANAGED } = PeripheralService.relationships;
 
 
-const PERIPHERAL_TYPE = 'demo1';
-const PERIPHERAL_ID = '9876';
-const PERIPHERAL_METADATA = { 'hello': 'world', 'great': true, interval: 100 };
+const PERIPHERAL_TYPE = 'nodejs_process';
 
 
 class Demo1 extends PeripheralService {
@@ -25,10 +25,40 @@ class Demo1 extends PeripheralService {
         super(opts, uptime, pmodule);
         this.name = 'ps-demo1';
         this.types = [PERIPHERAL_TYPE];
+        this.pid = process.pid.toString();
     }
 
     updatePeripheralState() {
-        this.emitPeripheralState(PERIPHERAL_TYPE, PERIPHERAL_ID, RELATIONSHIP_MANAGED, PERIPHERAL_METADATA);
+        var metadata = {
+            'pid': process.pid,
+            'ppid': process.ppid,
+            'platform': process.platform,
+            'versions': process.versions,
+            'arch': process.arch,
+            'os_uptime': os.uptime(),
+            'os_platform': os.platform()
+        };
+        this.emitPeripheralState(PERIPHERAL_TYPE, this.pid, RELATIONSHIP_MANAGED, metadata);
+    }
+
+    updateCpuUsage() {
+        /**
+         * The cpuUsage() shall output an object:
+         *
+         *  { user: 76553, system: 26834 }
+         */
+        var usage = process.cpuUsage(this.startUsage);
+        this.emitData(PERIPHERAL_TYPE, this.pid, 'cpu', '0', usage);
+    }
+
+    updateMemoryUsage() {
+        /**
+         * The memoryUsage() shall output an object:
+         * 
+         *  { rss: 32477184, heapTotal: 18169856, heapUsed: 8554328, external: 36657 }
+         */
+        var usage = process.memoryUsage();
+        this.emitData(PERIPHERAL_TYPE, this.pid, 'memory', '0', usage);
     }
 
     /**
@@ -38,6 +68,15 @@ class Demo1 extends PeripheralService {
      *                        peripheral-service is done.
      */
     init(done) {
+        return done();
+    }
+
+    /**
+     * After registration is successfully done, then start the service.
+     */
+    start() {
+        INFO("started..");
+        this.startUsage = process.cpuUsage();
         var self = this;
 
         /**
@@ -47,23 +86,21 @@ class Demo1 extends PeripheralService {
          * the state with metadata.
          */
         self.updatePeripheralState();
+        self.updateCpuUsage();
+        self.updateMemoryUsage();
         setInterval(() => {
             self.updatePeripheralState();
         }, 60000);
 
-        /* Keep updating cpu usages as sensor data of Peripheral1, every 2 seconds. */
-        var startUsage = process.cpuUsage();
+        /* Keep updating cpu usages as sensor data, every 2 seconds. */
         setInterval(() => {
-            /**
-             * The cpuUsage() shall output an object:
-             *
-             *    { user: 76553, system: 26834 }
-             */
-            var usage = process.cpuUsage(startUsage);
-            self.emitData(PERIPHERAL_TYPE, PERIPHERAL_ID, 'cpu', '0', usage);
+            self.updateCpuUsage();
         }, 2000);
 
-        return done();
+        /* Keep updating memory usages as sensor data, every 10 seconds. */
+        setInterval(() => {
+            self.updateCpuUsage();
+        }, 10000);
     }
 
     /**

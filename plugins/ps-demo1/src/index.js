@@ -14,8 +14,13 @@ var YAPPS_PLUGIN_MODULE = {
         var { opts } = module;
         var CLASS = require('./service');
         var ps = new CLASS(opts, systemUptime, module);
-        ps.init((err) => {
-            return err ? done(err) : psManager.register(ps, done);
+        ps.init((err1) => {
+            if (err1) {
+                return done();
+            }
+            psManager.register(ps, (err2) => {
+                return err2 ? done(err2) : done(null, ps.start());
+            });
         });
     }
 };
