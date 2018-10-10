@@ -1,3 +1,5 @@
+'use strict';
+
 var BaseMonitor = require('./base');
 
 class CpuMonitor extends BaseMonitor {

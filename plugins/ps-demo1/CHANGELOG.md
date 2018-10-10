@@ -1,3 +1,6 @@
+### 0.0.3
+
+- Apply `use strict` for all javascript sources.
 
 ### 0.0.2
 

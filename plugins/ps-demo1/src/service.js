@@ -1,3 +1,5 @@
+'use strict';
+
 /**
  * Get logger apis in SensorWeb3
  */
