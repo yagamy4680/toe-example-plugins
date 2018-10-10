@@ -62,3 +62,6 @@ typings/
 
 # OS-specific
 .DS_Store
+
+# Temporary files
+*.bak
