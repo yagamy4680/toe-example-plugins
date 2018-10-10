@@ -4,6 +4,7 @@
  * this file, and keep it as is.
  */
 var YAPPS_PLUGIN_MODULE = {
+
     'attach': function (opts, helpers) {
         module.opts = opts;
         module.helpers = helpers;
@@ -13,7 +14,7 @@ var YAPPS_PLUGIN_MODULE = {
         var { systemUptime, psManager } = app = this;
         var { opts } = module;
         var CLASS = require('./service');
-        var ps = new CLASS(opts, systemUptime, module);
+        var ps = module.ps = new CLASS(opts, systemUptime, module);
         ps.init((err1) => {
             if (err1) {
                 return done();
@@ -22,6 +23,18 @@ var YAPPS_PLUGIN_MODULE = {
                 return err2 ? done(err2) : done(null, ps.start());
             });
         });
+    },
+
+    'fini': function(done) {
+        var {ps} = module;
+        if (!ps) {
+            return done();
+        }
+        var {fini} = ps;
+        if (!fini) {
+            return done();
+        }
+        return fini.apply(ps, [done]);
     }
 };
 

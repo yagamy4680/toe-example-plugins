@@ -30,11 +30,8 @@ class Demo1 extends PeripheralService {
 
     updatePeripheralState() {
         var metadata = {
-            'pid': process.pid,
             'ppid': process.ppid,
-            'platform': process.platform,
             'versions': process.versions,
-            'arch': process.arch,
             'os_uptime': os.uptime(),
             'os_platform': os.platform()
         };
@@ -72,6 +69,26 @@ class Demo1 extends PeripheralService {
     }
 
     /**
+     * Finalize the peripheral-service before SensorWeb3 fully shutdown.
+     */
+    fini(done) {
+        var {peripheralTimer, cpuTimer, memoryTimer} = this;
+        if (peripheralTimer) {
+            INFO("stop peripheral timer");
+            clearInterval(peripheralTimer);
+        }
+        if (cpuTimer) {
+            INFO("stop cpu timer");
+            clearInterval(cpuTimer);
+        }
+        if (memoryTimer) {
+            INFO("stop memory timer");
+            clearInterval(memoryTimer);
+        }
+        return done();
+    }
+
+    /**
      * After registration is successfully done, then start the service.
      */
     start() {
@@ -85,20 +102,20 @@ class Demo1 extends PeripheralService {
          * state with metadata to SensorWeb3, so ToeAgent or other apps can process
          * the state with metadata.
          */
-        self.updatePeripheralState();
-        self.updateCpuUsage();
-        self.updateMemoryUsage();
-        setInterval(() => {
+        this.updatePeripheralState();
+        this.peripheralTimer = setInterval(() => {
             self.updatePeripheralState();
         }, 60000);
 
         /* Keep updating cpu usages as sensor data, every 2 seconds. */
-        setInterval(() => {
+        this.updateCpuUsage();
+        this.cpuTimer = setInterval(() => {
             self.updateCpuUsage();
         }, 2000);
 
         /* Keep updating memory usages as sensor data, every 10 seconds. */
-        setInterval(() => {
+        this.updateMemoryUsage();
+        this.memoryTimer = setInterval(() => {
             self.updateCpuUsage();
         }, 10000);
     }
