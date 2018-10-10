@@ -1,3 +1,5 @@
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Service = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function (__filename){
 'use strict';
 
 /**
@@ -185,3 +187,93 @@ class Service extends PeripheralService {
 }
 
 module.exports = exports = Service;
+}).call(this,require("path").join(__dirname,"src","index.js"))
+},{"./monitors/cpu":3,"./monitors/memory":4,"os":undefined,"path":undefined}],2:[function(require,module,exports){
+'use strict';
+
+const EventEmitter = require('events');
+
+class BaseMonitor extends EventEmitter {
+    constructor(interval) {
+        super();
+        this.name = 'base';
+        this.interval = interval;
+        this.timer = null;
+    }
+
+    getName() {
+        return this.name;
+    }
+
+    start() {
+        var self = this;
+        this.capture();
+        this.timer = setInterval(() => {
+            self.capture();
+        }, this.interval);
+    }
+
+    stop() {
+        if (this.timer) {
+            clearInterval(this.timer);
+        }
+    }
+
+    capture() {
+    }
+}
+
+module.exports = exports = BaseMonitor;
+},{"events":undefined}],3:[function(require,module,exports){
+'use strict';
+
+var BaseMonitor = require('./base');
+
+class CpuMonitor extends BaseMonitor {
+    constructor(interval) {
+        super(interval);
+        this.name = 'cpu';
+    }
+    
+    start() {
+        super.start();
+        this.startUsage = process.cpuUsage();
+    }
+
+    capture() {
+        /**
+         * The cpuUsage() shall output an object:
+         *
+         *  { user: 76553, system: 26834 }
+         */
+        var usage = process.cpuUsage(this.startUsage);
+        this.emit('data-updated', 'cpu', '0', usage);
+    }
+}
+
+module.exports = exports = CpuMonitor;
+},{"./base":2}],4:[function(require,module,exports){
+'use strict';
+
+var BaseMonitor = require('./base');
+
+class MemoryMonitor extends BaseMonitor {
+    constructor(interval) {
+        super(interval);
+        this.name = 'memory';
+    }
+
+    capture() {
+        /**
+         * The memoryUsage() shall output an object:
+         * 
+         *  { rss: 32477184, heapTotal: 18169856, heapUsed: 8554328, external: 36657 }
+         */
+        var usage = process.memoryUsage();
+        this.emit('data-updated', 'memory', '0', usage);
+    }
+}
+
+module.exports = exports = MemoryMonitor;
+},{"./base":2}]},{},[1])(1)
+});

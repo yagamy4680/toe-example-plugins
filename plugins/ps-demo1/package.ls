@@ -18,7 +18,7 @@
 
 # package.json
 #
-name: \demo1
+name: \ps-demo1
 
 author:
   name: ['Yagamy']
@@ -26,7 +26,7 @@ author:
 
 description: 'A demo for peripheral-service in SensorWeb3 plugin framework'
 
-version: \0.0.2
+version: \0.1.0
 
 repository:
   type: \git
@@ -43,10 +43,46 @@ dependencies:
 
 scripts:
   build: """
-  find src -name '*.ls' | xargs -I{} sh -c "echo compiling {} ...; cat {} | lsc -cp > lib/\\$(basename {} .ls).js"
+  rm -vf lib/*.js
+  echo "clean up lib directory ..."
+  find ./lib -name '*.js' | xargs -I{} sh -c "rm -vf {}"
+  echo "prepare index.js"
+  cp -v ./resources/wrapper.js ./lib/index.js
+  echo "producing lib/bundle.js (browserify on ./src/*.js)"
+  ./node_modules/browserify/bin/cmd.js \\
+      --node \\
+      --standalone Service \\
+      --outfile lib/bundle.js \\
+      ./src/index.js
+  echo "producing lib/bundle.pretty.js (browserify on ./src/*.js)"
+  ./node_modules/uglify-es/bin/uglifyjs \\
+      --beautify \\
+      --timings \\
+      --verbose \\
+      --ecma 6 \\
+      -o ./lib/bundle.pretty.js \\
+      ./lib/bundle.js
+  echo "producing lib/bundle.min.js (browserify on ./src/*.js)"
+  ./node_modules/uglify-es/bin/uglifyjs \\
+      --compress \\
+      --mangle \\
+      --timings \\
+      --verbose \\
+      --ecma 6 \\
+      -o ./lib/bundle.min.js \\
+      ./lib/bundle.js
+  ls -alh lib/bundle*
+  """
+  deploy: """
+  ES6=false ./run-sensorweb3-standalone
+  """
+  src: """
+  ES6=true ./run-sensorweb3-standalone
   """
 
-devDependencies: {}
+devDependencies:
+  \browserify-livescript : \^0.2.3
+  \uglify-es : \^3.3.9
+  \browserify : \^16.2.2
 
 optionalDependencies: {}
-
