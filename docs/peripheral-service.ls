@@ -40,6 +40,12 @@ class PeripheralService
     return done!
 
   ##
+  # Finalize the PeripheralService before SensorWeb3 fully shutdown.
+  #
+  fini: (done) ->
+    return done!
+
+  ##
   # Discover all available peripherals under the wired/wireless protocols
   # supported by the service.
   #
@@ -256,6 +262,13 @@ class PeripheralService
   emit-pipe-data: (name, data) ->
     ### DEVELOPER: please don't change this code, just call this function.
     return @ee.emit EVENT_PIPE_UPDATED, name, data
+
+  ##
+  # Indicates the peripheral-service is successfully registered to SensorWeb3, and all
+  # requested resources starts serving (e.g. Pipe).
+  #
+  at-registered: ->
+    return
 
   ##
   # Process the data from pipe, either LINE or BUFFER.

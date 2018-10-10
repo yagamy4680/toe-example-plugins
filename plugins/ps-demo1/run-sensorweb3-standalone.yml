@@ -1,0 +1,4 @@
+##
+# Run the Docker with image version.
+#
+DOCKER_IMAGE_VERSION: 3.9.1

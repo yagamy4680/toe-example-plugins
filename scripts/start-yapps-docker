@@ -22,6 +22,7 @@ function init_variables {
 	export ENV_OPT_DUMP_CONF="YAPPS_DUMP_LOADED_CONFIG=${YAPPS_DUMP_LOADED_CONFIG}"
 	export ENV_OPT_PLUGIN="${PLUGIN_ENV_NAME}=/opt/${PLUGIN_NAME}"
 	[ "true" == "${LIVESCRIPT}" ] && export ENV_OPT_PLUGIN="${ENV_OPT_PLUGIN}/src"
+	[ "true" == "${ES6}" ] && export ENV_OPT_PLUGIN="${ENV_OPT_PLUGIN}/src"
 }
 
 function cat_conf_get_value {

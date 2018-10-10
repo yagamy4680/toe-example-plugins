@@ -65,6 +65,17 @@ class Demo1 extends PeripheralService {
      *                        peripheral-service is done.
      */
     init(done) {
+        /*
+         * All resources related to this peripheral-service shall be initialized here. For
+         * example, the peripheral-service serves all BluetoothLE heartbeat rate sensors, then
+         * the init() shall be responsible for initializing the Bluetooth LE protocol stack
+         * on Linux (or establish connection with another process which is a dedicated Bluetooth
+         * daemon).
+         * 
+         * Please don't perform sensor data or peripheral state updates within this function. 
+         * Please perform sensor data updates and peripheral state updates after `atRegistered()` is 
+         * called.
+         */
         return done();
     }
 
@@ -91,8 +102,8 @@ class Demo1 extends PeripheralService {
     /**
      * After registration is successfully done, then start the service.
      */
-    start() {
-        INFO("started..");
+    atRegistered() {
+        INFO("the peripheral service is registered ...");
         this.startUsage = process.cpuUsage();
         var self = this;
 

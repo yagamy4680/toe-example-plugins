@@ -41,7 +41,7 @@ function run_sensorweb3 {
 			sensor-web3 \
 			6020,6021,6022,6023,6024 \
 			${PLUGIN_DIR} \
-			YAPPS_EXTRA_PLUGINS \
+			YAPPS_EXTRA_PERIPHERAL_SERVICES \
 			"$@"
 }
 
