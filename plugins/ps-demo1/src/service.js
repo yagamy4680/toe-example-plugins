@@ -1,5 +1,3 @@
-var os = require('os');
-
 /**
  * Get logger apis in SensorWeb3
  */
@@ -26,9 +24,11 @@ class Demo1 extends PeripheralService {
         this.name = 'ps-demo1';
         this.types = [PERIPHERAL_TYPE];
         this.pid = process.pid.toString();
+        this.monitors = [];
     }
 
     updatePeripheralState() {
+        var os = require('os');
         var metadata = {
             'ppid': process.ppid,
             'versions': process.versions,
@@ -38,24 +38,8 @@ class Demo1 extends PeripheralService {
         this.emitPeripheralState(PERIPHERAL_TYPE, this.pid, RELATIONSHIP_MANAGED, metadata);
     }
 
-    updateCpuUsage() {
-        /**
-         * The cpuUsage() shall output an object:
-         *
-         *  { user: 76553, system: 26834 }
-         */
-        var usage = process.cpuUsage(this.startUsage);
-        this.emitData(PERIPHERAL_TYPE, this.pid, 'cpu', '0', usage);
-    }
-
-    updateMemoryUsage() {
-        /**
-         * The memoryUsage() shall output an object:
-         * 
-         *  { rss: 32477184, heapTotal: 18169856, heapUsed: 8554328, external: 36657 }
-         */
-        var usage = process.memoryUsage();
-        this.emitData(PERIPHERAL_TYPE, this.pid, 'memory', '0', usage);
+    processMonitorData(s_type, s_id, data) {
+        this.emitData(PERIPHERAL_TYPE, this.pid, s_type, s_id, data);
     }
 
     /**
@@ -76,6 +60,25 @@ class Demo1 extends PeripheralService {
          * Please perform sensor data updates and peripheral state updates after `atRegistered()` is 
          * called.
          */
+
+        /* Keep updating cpu usages as sensor data, every 2 seconds. */
+        var CpuMonitor = require('./monitors/cpu');
+        var cpu = new CpuMonitor(2000);
+        this.monitors.push(cpu);
+
+        /* Keep updating memory usages as sensor data, every 10 seconds. */
+        var MemoryMonitor = require('./monitors/memory');
+        var memory = new MemoryMonitor(10000);
+        this.monitors.push(memory);
+
+        /* Listen to data updates of each monitor */
+        var self = this;
+        this.monitors.forEach(m => {
+            INFO(`add data listener for monitors[${m.getName().yellow}]`);
+            m.on('data-updated', (s_type, s_id, data) => {
+                return self.processMonitorData(s_type, s_id, data);
+            });
+        });
         return done();
     }
 
@@ -83,19 +86,14 @@ class Demo1 extends PeripheralService {
      * Finalize the peripheral-service before SensorWeb3 fully shutdown.
      */
     fini(done) {
-        var {peripheralTimer, cpuTimer, memoryTimer} = this;
-        if (peripheralTimer) {
+        if (this.peripheralTimer) {
             INFO("stop peripheral timer");
-            clearInterval(peripheralTimer);
+            clearInterval(this.peripheralTimer);
         }
-        if (cpuTimer) {
-            INFO("stop cpu timer");
-            clearInterval(cpuTimer);
-        }
-        if (memoryTimer) {
-            INFO("stop memory timer");
-            clearInterval(memoryTimer);
-        }
+        this.monitors.forEach(m => {
+            INFO(`stop monitors[${m.getName().yellow}]`);
+            m.stop();
+        });
         return done();
     }
 
@@ -104,31 +102,21 @@ class Demo1 extends PeripheralService {
      */
     atRegistered() {
         INFO("the peripheral service is registered ...");
-        this.startUsage = process.cpuUsage();
-        var self = this;
 
         /**
-         * Update peripheral1 every 60 seconds. Please note, typically the peripheral
-         * state update is not so frequent. Here we just show how to update peripheral
-         * state with metadata to SensorWeb3, so ToeAgent or other apps can process
-         * the state with metadata.
+         * Update the only one peripheral every 60 seconds. Please note, typically the 
+         * peripheral state update is not so frequent. Here we just show how to update 
+         * peripheral state with metadata to SensorWeb3, so ToeAgent or other apps can 
+         * process the state with metadata.
          */
         this.updatePeripheralState();
         this.peripheralTimer = setInterval(() => {
             self.updatePeripheralState();
         }, 60000);
 
-        /* Keep updating cpu usages as sensor data, every 2 seconds. */
-        this.updateCpuUsage();
-        this.cpuTimer = setInterval(() => {
-            self.updateCpuUsage();
-        }, 2000);
-
-        /* Keep updating memory usages as sensor data, every 10 seconds. */
-        this.updateMemoryUsage();
-        this.memoryTimer = setInterval(() => {
-            self.updateCpuUsage();
-        }, 10000);
+        this.monitors.forEach(m => {
+            m.start();
+        });
     }
 
     /**

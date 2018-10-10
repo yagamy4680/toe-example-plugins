@@ -42,6 +42,7 @@ function run_sensorweb3 {
 			6020,6021,6022,6023,6024 \
 			${PLUGIN_DIR} \
 			YAPPS_EXTRA_PERIPHERAL_SERVICES \
+			-b "ps-manager.handlers.console.enabled=true"
 			"$@"
 }
 
@@ -86,7 +87,6 @@ function run_with_extra_tcp {
 	local OPT1="^communicator.connections.${NAME}:$(generate_sensorweb3_communicator_connection ${ADDR} ${PORT} | base64 ${BASE64_OPTS})"
 	local OPT2="^sock.servers.${NAME}:$(generate_sensorweb3_sock | base64 ${BASE64_OPTS})"
 	local OPT3="^tcp-proxy.bridges.${NAME}:$(generate_sensorweb3_tcp_proxy_bridge ${NAME} | base64 ${BASE64_OPTS})"
-	local OPT_ADVANCED="-b \"ps-manager.handlers.console.enabled=true\""
 
 	echo "-o ${OPT1}"
 	echo "-o ${OPT2}"
