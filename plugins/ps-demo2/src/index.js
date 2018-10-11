@@ -32,6 +32,7 @@ class Service extends PeripheralService {
          */
         // this.name = 'ps-demo2';
         // this.types = [PERIPHERAL_TYPE];
+        //
         this.pid = process.pid.toString();
         this.monitors = [];
         INFO(`name => ${this.name}`);
@@ -47,11 +48,11 @@ class Service extends PeripheralService {
             'os_uptime': os.uptime(),
             'os_platform': os.platform()
         };
-        this.emitPeripheralState(PERIPHERAL_TYPE, this.pid, RELATIONSHIP_MANAGED, metadata);
+        this.emitPeripheralState(this.types[0], this.pid, RELATIONSHIP_MANAGED, metadata);
     }
 
     processMonitorData(s_type, s_id, data) {
-        this.emitData(PERIPHERAL_TYPE, this.pid, s_type, s_id, data);
+        this.emitData(this.types[0], this.pid, s_type, s_id, data);
     }
 
     /**
