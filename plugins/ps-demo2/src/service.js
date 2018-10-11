@@ -16,17 +16,27 @@ var { PeripheralService, express, bodyParser } = global.getBundledModules();
 const { RELATIONSHIP_NONE, RELATIONSHIP_CONFIGURED, RELATIONSHIP_MANAGED } = PeripheralService.relationships;
 
 
-const PERIPHERAL_TYPE = 'nodejs_process';
-
-
 class Service extends PeripheralService {
 
     constructor(opts, uptime, pmodule) {
-        super(opts, uptime, pmodule);
-        this.name = 'ps-demo1';
-        this.types = [PERIPHERAL_TYPE];
+        super(opts, uptime, pmodule, require('./schema.json'));
+        /**
+         * With the given schema.json (compiled from schema.ls), following 3 member fields
+         * of current service object is set:
+         *  
+         *  - this.name     (from `schema.json:manifest/name`)
+         *  - this.types    (from `schema.json:peripheral_types`)
+         * 
+         * So, service object doesn't need to initialize `name` and `types` 
+         * variables in constructor anymore.
+         */
+        // this.name = 'ps-demo2';
+        // this.types = [PERIPHERAL_TYPE];
         this.pid = process.pid.toString();
         this.monitors = [];
+        INFO(`name => ${this.name}`);
+        INFO(`types => ${JSON.stringify(this.types)}`);
+        INFO(`schema => \n${JSON.stringify(this.schema)}`);
     }
 
     updatePeripheralState() {
