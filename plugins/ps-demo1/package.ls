@@ -73,7 +73,8 @@ scripts:
       ./lib/bundle.js
   ls -alh lib/bundle*
   """
-  deploy: """
+  local: """
+  npm run build
   ES6=false ./run-sensorweb3-standalone
   """
   src: """

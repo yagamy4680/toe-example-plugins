@@ -113,6 +113,7 @@ class Service extends PeripheralService {
          * peripheral state with metadata to SensorWeb3, so ToeAgent or other apps can 
          * process the state with metadata.
          */
+        var self = this;
         this.updatePeripheralState();
         this.peripheralTimer = setInterval(() => {
             self.updatePeripheralState();

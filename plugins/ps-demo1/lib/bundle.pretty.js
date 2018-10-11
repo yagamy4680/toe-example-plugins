@@ -101,6 +101,7 @@
                     }
                     atRegistered() {
                         INFO("the peripheral service is registered ...");
+                        var self = this;
                         this.updatePeripheralState();
                         this.peripheralTimer = setInterval(() => {
                             self.updatePeripheralState();

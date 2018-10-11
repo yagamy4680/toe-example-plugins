@@ -14,13 +14,14 @@ function init_variables {
 	[ "" == "${YAPPS_DUMP_LOADED_CONFIG}" ] && export YAPPS_DUMP_LOADED_CONFIG="false"
 
 	export PLUGIN_NAME=$(basename ${PLUGIN_DIR})
+	export PLUGIN_DOCKER_DIR="/opt/plugins/${PLUGIN_NAME}"
 	export CONTAINER_NAME="${APP_NAME}-test-$(date '+%m%d-%H%M%S')"
 	export DOCKER_IMAGE_NAME="tictactoe/yapps.${APP_NAME}"
 	export DOCKER_IMAGE_VERSION=$(cat_conf_get_value DOCKER_IMAGE_VERSION latest)
 	export LAUNCH_SCRIPT="/tmp/run-docker-${APP_NAME}"
 
 	export ENV_OPT_DUMP_CONF="YAPPS_DUMP_LOADED_CONFIG=${YAPPS_DUMP_LOADED_CONFIG}"
-	export ENV_OPT_PLUGIN="${PLUGIN_ENV_NAME}=/opt/${PLUGIN_NAME}"
+	export ENV_OPT_PLUGIN="${PLUGIN_ENV_NAME}=${PLUGIN_DOCKER_DIR}"
 	[ "true" == "${LIVESCRIPT}" ] && export ENV_OPT_PLUGIN="${ENV_OPT_PLUGIN}/src"
 	[ "true" == "${ES6}" ] && export ENV_OPT_PLUGIN="${ENV_OPT_PLUGIN}/src"
 }
@@ -100,7 +101,7 @@ docker run \\
 	--rm \\
 	--name ${CONTAINER_NAME} \\
 	${CONTAINER_PORT_OPTS} \\
-	-v ${PLUGIN_DIR}:/opt/${PLUGIN_NAME} \\
+	-v ${PLUGIN_DIR}:${PLUGIN_DOCKER_DIR} \\
 	-e ${ENV_OPT_DUMP_CONF} \\
 	-e ${ENV_OPT_PLUGIN} \\
 	$(show_plugin_config_pathes) \\
