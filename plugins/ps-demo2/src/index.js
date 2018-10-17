@@ -38,6 +38,8 @@ class Service extends PeripheralService {
         INFO(`name => ${this.name}`);
         INFO(`types => ${JSON.stringify(this.types)}`);
         INFO(`schema => \n${JSON.stringify(this.schema)}`);
+        this.state_index = 0;
+        this.states = [RELATIONSHIP_MANAGED, RELATIONSHIP_CONFIGURED];
     }
 
     updatePeripheralState() {
@@ -48,7 +50,8 @@ class Service extends PeripheralService {
             'os_uptime': os.uptime(),
             'os_platform': os.platform()
         };
-        this.emitPeripheralState(this.types[0], this.pid, RELATIONSHIP_MANAGED, metadata);
+        this.emitPeripheralState(this.types[0], this.pid, this.states[this.state_index % this.states.length], metadata);
+        this.state_index = this.state_index + 1;
     }
 
     processMonitorData(s_type, s_id, data) {
