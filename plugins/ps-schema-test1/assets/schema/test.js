@@ -66,6 +66,10 @@
         field: 'external',
         unit: 'bytes',
         value: ['int', [0, 4294967296]]
+      }, {
+        field: 'ext',
+        unit: '',
+        value: ['enum', ['0st', '1st', '2nd', '3rd', '4th', '5st', '6st', '7st']]
       }
     ];
     function NodejsProcess(){

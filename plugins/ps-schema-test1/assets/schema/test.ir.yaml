@@ -1,6 +1,6 @@
 manifest:
   format: 2
-  created_at: 2018-10-15T21:47:31.191Z
+  created_at: 2018-10-17T19:07:26.053Z
   name: schema-test
   version: 0.0.1
 peripheral_types:
@@ -76,5 +76,20 @@ peripheral_types:
                 - 0
                 - 4294967296
             unit: bytes
+            annotations: {}
+          - name: ext
+            writeable: false
+            value:
+              type: enum
+              range:
+                - 0st
+                - 1st
+                - 2nd
+                - 3rd
+                - 4th
+                - 5st
+                - 6st
+                - 7st
+            unit: ''
             annotations: {}
         actions: []
