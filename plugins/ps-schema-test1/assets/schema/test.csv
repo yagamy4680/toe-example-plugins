@@ -1,0 +1,8 @@
+p_type,s_type,s_id,name,writable,type,unit
+nodejs_process,cpu,0,user,false,int,bytes
+nodejs_process,cpu,0,system,false,int,bytes
+nodejs_process,memory,0,rss,false,int,bytes
+nodejs_process,memory,0,heapTotal,false,int,bytes
+nodejs_process,memory,0,heapUsed,false,int,bytes
+nodejs_process,memory,0,external,false,int,bytes
+nodejs_process,memory,0,ext,false,enum,

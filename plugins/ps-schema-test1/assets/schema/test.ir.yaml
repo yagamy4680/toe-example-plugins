@@ -1,95 +1,77 @@
 manifest:
   format: 2
-  created_at: 2018-10-17T19:07:26.053Z
   name: schema-test
   version: 0.0.1
-peripheral_types:
-  - p_type: schema_base_class
-    p_type_parent: null
-    class_name: SchemaBaseClass
-    sensor_types: []
-  - p_type: nodejs_process
-    p_type_parent: schema_base_class
-    class_name: NodejsProcess
-    sensor_types:
-      - s_type: cpu
-        instances:
-          - s_id: '0'
-            annotations: {}
-        fields:
-          - name: user
-            writeable: false
-            value:
-              type: int
-              range:
-                - 0
-                - 4294967296
-            unit: bytes
-            annotations: {}
-          - name: system
-            writeable: false
-            value:
-              type: int
-              range:
-                - 0
-                - 4294967296
-            unit: bytes
-            annotations: {}
-        actions: []
-      - s_type: memory
-        instances:
-          - s_id: '0'
-            annotations: {}
-        fields:
-          - name: rss
-            writeable: false
-            value:
-              type: int
-              range:
-                - 0
-                - 4294967296
-            unit: bytes
-            annotations: {}
-          - name: heapTotal
-            writeable: false
-            value:
-              type: int
-              range:
-                - 0
-                - 4294967296
-            unit: bytes
-            annotations: {}
-          - name: heapUsed
-            writeable: false
-            value:
-              type: int
-              range:
-                - 0
-                - 4294967296
-            unit: bytes
-            annotations: {}
-          - name: external
-            writeable: false
-            value:
-              type: int
-              range:
-                - 0
-                - 4294967296
-            unit: bytes
-            annotations: {}
-          - name: ext
-            writeable: false
-            value:
-              type: enum
-              range:
-                - 0st
-                - 1st
-                - 2nd
-                - 3rd
-                - 4th
-                - 5st
-                - 6st
-                - 7st
-            unit: ''
-            annotations: {}
-        actions: []
+  created_at: 2018-10-18T17:36:55.928Z
+  checksum: 29e39efeddc7588365fe465dffeded5b711015aff7fb4438807c848deafa762f
+content:
+  peripheral_types:
+    - p_type: schema_base_class
+      p_type_parent: null
+      class_name: SchemaBaseClass
+      sensor_types: []
+    - p_type: nodejs_process
+      p_type_parent: schema_base_class
+      class_name: NodejsProcess
+      sensor_types:
+        - s_type: cpu
+          instances:
+            - s_id: '0'
+              annotations: {}
+          fields:
+            - name: user
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+            - name: system
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+          actions: []
+        - s_type: memory
+          instances:
+            - s_id: '0'
+              annotations: {}
+          fields:
+            - name: rss
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+            - name: heapTotal
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+            - name: heapUsed
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+            - name: external
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+            - name: ext
+              writeable: false
+              value:
+                type: enum
+                range: [0st,1st,2nd,3rd,4th,5st,6st,7st]
+              unit: ''
+              annotations: {}
+          actions: []
