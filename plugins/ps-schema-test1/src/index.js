@@ -87,6 +87,11 @@ class Service extends PeripheralService {
         var memory = new MemoryMonitor(10000);
         this.monitors.push(memory);
 
+        /* Keep updating OS process status as sensor data, every 15 seconds. */
+        var MemoryMonitor = require('./monitors/os');
+        var osm = new MemoryMonitor(15000);
+        this.monitors.push(osm);
+
         /* Listen to data updates of each monitor */
         var self = this;
         this.monitors.forEach(m => {
@@ -194,7 +199,25 @@ class Service extends PeripheralService {
          * perform http request to SensorWeb3 running on any Conscious box.
          */
         DBG(`got actuator-request: ${p_type}/${p_id}/${a_type}/${a_id}/${action} => ${arg1}, ${arg2}, ${arg3}`);
-        return done();
+        if (action == 'make_trouble') {
+            if (arg1 == 0) {
+                // make a timeout
+                INFO("making a timeout trouble... in 60 seconds");
+                setTimeout(() => {
+                    INFO("timout!!")
+                    return done();
+                }, 60*1000)
+            }
+            else if (arg1 == 1) {
+                return done("fake error");
+            }
+            else {
+                return done();
+            }
+        }
+        else {
+            return done();
+        }
     }
 
 }

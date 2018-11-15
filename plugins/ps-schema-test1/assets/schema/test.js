@@ -72,12 +72,28 @@
         value: ['enum', ['0st', '1st', '2nd', '3rd', '4th', '5st', '6st', '7st']]
       }
     ];
+    NodejsProcess.prototype.os = [{
+      field: 'priority',
+      unit: '',
+      value: ['int', [-20, 19]],
+      writeable: true
+    }];
     function NodejsProcess(){
       NodejsProcess.superclass.call(this);
       this.declareSensors({
         cpu: ['0'],
-        memory: ['0']
+        memory: ['0'],
+        os: ['current']
       });
+      this.actuators['os'] = [
+        {
+          action: 'full_speed',
+          argument: ['boolean', ['off,', 'on']]
+        }, {
+          action: 'make_trouble',
+          argument: ['enum', ['timeout', 'error']]
+        }
+      ];
     }
     return NodejsProcess;
   }(SchemaBaseClass));

@@ -34,6 +34,11 @@ class NodejsProcess extends SchemaBaseClass
     * field: \external  , unit: \bytes  , value: [\int, [0, 4294967296]]
     * field: \ext       , unit: ''      , value: [\enum, <[0st 1st 2nd 3rd 4th 5st 6st 7st]>]
 
+  os:
+    * field: \priority  , unit: ''      , value: [\int, [-20, 19]], writeable: yes
+    # * field: \priority  , unit: ''      , value: [\enum, <[low medium high highest]>], writeable: yes
+    ...
+
   ->
     super!
     ##
@@ -42,6 +47,11 @@ class NodejsProcess extends SchemaBaseClass
     @.declare-sensors do
       cpu   : <[0]>
       memory: <[0]>
+      os    : <[current]>
+  
+    @actuators[\os] =
+      * action: \full_speed           , argument: [\boolean, <[off, on]>]
+      * action: \make_trouble         , argument: [\enum, <[timeout fake_error]>]
 
 ##
 # The root classes to be exported. Schema parser or SensorWeb shall read the list

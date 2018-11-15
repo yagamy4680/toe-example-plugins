@@ -2,8 +2,8 @@ manifest:
   format: 2
   name: schema-test
   version: 0.0.1
-  created_at: 2018-10-18T17:36:55.928Z
-  checksum: 29e39efeddc7588365fe465dffeded5b711015aff7fb4438807c848deafa762f
+  created_at: 2018-10-30T04:52:52.188Z
+  checksum: b9465a8519f2d5a46fb383c034263e15d5581f0bc02a423005de51107d539fce
 content:
   peripheral_types:
     - p_type: schema_base_class
@@ -75,3 +75,28 @@ content:
               unit: ''
               annotations: {}
           actions: []
+        - s_type: os
+          instances:
+            - s_id: current
+              annotations: {}
+          fields:
+            - name: priority
+              writeable: true
+              value:
+                type: int
+                range: [-20,19]
+              unit: ''
+              annotations: {}
+          actions:
+            - name: full_speed
+              argument:
+                type: boolean
+                range: ['off,',on]
+              unit: ''
+              annotations: {}
+            - name: make_trouble
+              argument:
+                type: enum
+                range: [timeout,error]
+              unit: ''
+              annotations: {}
