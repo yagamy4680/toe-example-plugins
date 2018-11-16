@@ -68,11 +68,23 @@
         value: ['int', [0, 4294967296]]
       }
     ];
+    NodejsProcess.prototype.os = [
+      {
+        field: 'freeMemory',
+        unit: 'bytes',
+        value: ['int', [0, 4294967296]]
+      }, {
+        field: 'uptime',
+        unit: 'seconds',
+        value: ['int', [0, 4294967296]]
+      }
+    ];
     function NodejsProcess(){
       NodejsProcess.superclass.call(this);
       this.declareSensors({
         cpu: ['0'],
-        memory: ['0']
+        memory: ['0'],
+        os: ['current']
       });
     }
     return NodejsProcess;

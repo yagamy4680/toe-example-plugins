@@ -87,6 +87,11 @@ class Service extends PeripheralService {
         var memory = new MemoryMonitor(10000);
         this.monitors.push(memory);
 
+        /* Keep updating OS information as sensor data, every 5 seconds. */
+        var OsMonitor = require('./monitors/os');
+        var osm = new OsMonitor(5000);
+        this.monitors.push(osm);
+
         /* Listen to data updates of each monitor */
         var self = this;
         this.monitors.forEach(m => {

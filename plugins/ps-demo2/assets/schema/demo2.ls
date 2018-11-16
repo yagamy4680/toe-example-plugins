@@ -33,6 +33,10 @@ class NodejsProcess extends SchemaBaseClass
     * field: \heapUsed  , unit: \bytes  , value: [\int, [0, 4294967296]]
     * field: \external  , unit: \bytes  , value: [\int, [0, 4294967296]]
 
+  os:
+    * field: \freeMemory, unit: \bytes  , value: [\int, [0, 4294967296]]
+    * field: \uptime    , unit: \seconds, value: [\int, [0, 4294967296]]
+
   ->
     super!
     ##
@@ -41,6 +45,7 @@ class NodejsProcess extends SchemaBaseClass
     @.declare-sensors do
       cpu   : <[0]>
       memory: <[0]>
+      os    : <[current]>
 
 ##
 # The root classes to be exported. Schema parser or SensorWeb shall read the list
