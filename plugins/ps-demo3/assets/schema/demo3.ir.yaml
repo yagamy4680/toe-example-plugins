@@ -1,0 +1,101 @@
+manifest:
+  format: 2
+  name: demo3
+  version: 0.0.1
+  created_at: 2018-11-16T06:23:22.282Z
+  checksum: 60a040c9ba61210cda3552349ffc016bb243ad763da858aed6a8d71747b8722b
+content:
+  peripheral_types:
+    - p_type: schema_base_class
+      p_type_parent: null
+      class_name: SchemaBaseClass
+      sensor_types: []
+    - p_type: nodejs_process
+      p_type_parent: schema_base_class
+      class_name: NodejsProcess
+      sensor_types:
+        - s_type: cpu
+          instances:
+            - s_id: '0'
+              annotations:
+                type: single
+                module: process
+                method: cpuUsage
+          fields:
+            - name: user
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+            - name: system
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+          actions: []
+        - s_type: memory
+          instances:
+            - s_id: '0'
+              annotations:
+                type: single
+                module: process
+                method: memoryUsage
+          fields:
+            - name: rss
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+            - name: heapTotal
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+            - name: heapUsed
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+            - name: external
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations: {}
+          actions: []
+        - s_type: os
+          instances:
+            - s_id: current
+              annotations:
+                type: composed
+          fields:
+            - name: freeMemory
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: bytes
+              annotations:
+                method: freemem
+                module: os
+            - name: uptime
+              writeable: false
+              value:
+                type: int
+                range: [0,4294967296]
+              unit: seconds
+              annotations:
+                method: uptime
+                module: os
+          actions: []
