@@ -24,13 +24,16 @@ function init_variables {
 	export ENV_OPT_PLUGIN="${PLUGIN_ENV_NAME}=${PLUGIN_DOCKER_DIR}"
 	[ "true" == "${LIVESCRIPT}" ] && export ENV_OPT_PLUGIN="${ENV_OPT_PLUGIN}/src"
 	[ "true" == "${ES6}" ] && export ENV_OPT_PLUGIN="${ENV_OPT_PLUGIN}/src"
+
+	[ "" == "$(which jq)" ] && INFO "please install jq before running ${APP_NAME}" && exit 1
+	[ "" == "$(which js-yaml)" ] && INFO "please install js-yaml via npm or yarn before running ${APP_NAME}" && exit 1
 }
 
 function cat_conf_get_value {
 	[ "" == "$1" ] && return 1
 	[ "" == "$2" ] && return 1
 	[ ! -f "${CONF}" ] && echo $2 && return 0
-	local VALUE=$(cat "${CONF}" | shyaml get-value $1)
+	local VALUE=$(cat "${CONF}" | js-yaml | jq -r ".$1")
 	[ "0" != "$?" ] && echo $2 || echo ${VALUE}
 }
 
