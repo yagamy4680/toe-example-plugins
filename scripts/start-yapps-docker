@@ -17,7 +17,7 @@ function init_variables {
 	export PLUGIN_DOCKER_DIR="/opt/plugins/${PLUGIN_NAME}"
 	export CONTAINER_NAME="${APP_NAME}-test-$(date '+%m%d-%H%M%S')"
 	export DOCKER_IMAGE_NAME="tictactoe/yapps.${APP_NAME}"
-	export DOCKER_IMAGE_VERSION=$(cat_conf_get_value DOCKER_IMAGE_VERSION latest)
+	[ "" == "${DOCKER_IMAGE_VERSION}" ]  && export DOCKER_IMAGE_VERSION=$(cat_conf_get_value DOCKER_IMAGE_VERSION latest)
 	export LAUNCH_SCRIPT="/tmp/run-docker-${APP_NAME}"
 
 	export ENV_OPT_DUMP_CONF="YAPPS_DUMP_LOADED_CONFIG=${YAPPS_DUMP_LOADED_CONFIG}"
@@ -77,9 +77,10 @@ function show_plugin_config_pathes {
 	done
 }
 
-function show_plugin_env_variables {
+function show_env_variables_with_prefix {
+	local PREFIX=$1
 	IFS=$'\n'
-	local ENVS=($(env | sort | grep "^YAPPS_PLUGIN_ENV_"))
+	local ENVS=($(env | sort | grep "^${PREFIX}_"))
 	unset IFS
 	local FIRST="true"
 	for e in "${ENVS[@]}"; do
@@ -90,8 +91,29 @@ function show_plugin_env_variables {
 		else
 			echo -ne "\\\\\n\t"
 		fi
-		echo -ne "-e ${NAME}=\"${VALUE}\""
+		echo -ne "-e ${NAME}=\"${VALUE}\" "
 	done
+}
+
+function show_plugin_env_variables {
+	show_env_variables_with_prefix "YAPPS_PLUGIN_ENV"
+}
+
+function show_container_tic_conf {
+	show_env_variables_with_prefix "CLOUD"
+}
+
+function show_container_app_conf {
+	[ "" == "${DOCKER_IMAGE_CONF}" ] && return 0
+	[ ! -f "${DOCKER_IMAGE_CONF}" ] && return 0
+	local CURRENT=$(pwd)
+	cd $(dirname ${DOCKER_IMAGE_CONF})
+	echo -ne "-v $(pwd)/$(basename ${DOCKER_IMAGE_CONF}):/yapps/config/default.json"
+	cd ${CURRENT}
+}
+
+function show_container_verbose_option {
+	[ "true" == "${VERBOSE}" ] && echo -ne "-v"
 }
 
 function generate_script {
@@ -104,7 +126,9 @@ docker run \\
 	--rm \\
 	--name ${CONTAINER_NAME} \\
 	${CONTAINER_PORT_OPTS} \\
+	$(show_container_app_conf) \\
 	-v ${PLUGIN_DIR}:${PLUGIN_DOCKER_DIR} \\
+	$(show_container_tic_conf) \\
 	-e ${ENV_OPT_DUMP_CONF} \\
 	-e ${ENV_OPT_PLUGIN} \\
 	$(show_plugin_config_pathes) \\
@@ -113,7 +137,7 @@ docker run \\
 		node \\
 			--expose-gc \\
 			index.js \\
-				-v \\
+				$(show_container_verbose_option) \\
 				$@
 __EOF__
 }

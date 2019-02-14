@@ -1,6 +1,11 @@
 #!/bin/bash
 #
 
+function check_prerequisites {
+	[ "" == "$(which js-yaml)" ] && echo "please install js-yaml via npm/yarn first" && exit 1
+	[ "" == "$(which jq)" ] && echo "please instann jq first" && exit 1
+}
+
 function err_exit {
 	local CODE=$1
 	shift
@@ -10,35 +15,43 @@ function err_exit {
 function cat_conf_get_value {
 	[ ! -f "$0.yml" ] && return
 	[ "" == "$1" ] && return
-	local VALUE=$(cat "$0.yml" | shyaml get-value $1)
+	local VALUE=$(cat "$0.yml" | js-yaml | jq -r ".$1")
 	echo ${VALUE}
 }
 
 function run_agent_server {
-	local BLEMO_SERVICE_ENABLED=$(cat_conf_get_value BLEMO_SERVICE_ENABLED)
-	local TIC_HUB_SERVER=$(cat_conf_get_value TIC_HUB_SERVER)
-	local TIC_DM_SERVER=$(cat_conf_get_value TIC_DM_SERVER)
+	local TMP_OPTS=$(mktemp /tmp/XXXXXX)
 
-	echo "BLEMO_SERVICE_ENABLED => ${BLEMO_SERVICE_ENABLED}"
-	echo "TIC_HUB_SERVER => ${TIC_HUB_SERVER}"
-	echo "TIC_DM_SERVER => ${TIC_DM_SERVER}"
-
-	if [ "false" == "$(cat_conf_get_value BLEMO_SERVICE_ENABLED | tr '[A-Z]' '[a-z]')" ]; then
-		local EXTRA_BLEMO_OPTS="-o \"sensorweb3-client.wss.client_opts={}\""
+	if [ "true" == "$(cat_conf_get_value TICC_UPLOAD_DG_TS false)" ]; then
+		echo -e "-b 'tic-client.uploaders.dg-ts.enabled=true'" >> ${TMP_OPTS}
+	else
+		echo -e "-b 'tic-client.uploaders.dg-ts.enabled=false'" >> ${TMP_OPTS}
 	fi
 
-	[ "" != ${TIC_HUB_SERVER} ] && local EXTRA_TIC_HUB_OPTS="-s \"tic-client.dg.hub=${TIC_HUB_SERVER}\""
-	[ "" != ${TIC_DM_SERVER} ] && local EXTRA_TIC_DM_OPTS="-s \"tic-client.dm.server=${TIC_DM_SERVER}\""
+	if [ "true" == "$(cat_conf_get_value TICC_UPLOAD_DG_SS false)" ]; then
+		echo -e "-b 'tic-client.uploaders.dg-ss.enabled=true'" >> ${TMP_OPTS}
+	else
+		echo -e "-b 'tic-client.uploaders.dg-ss.enabled=false'" >> ${TMP_OPTS}
+	fi
 
-	${SCRIPT_DIR}/start-yapps-docker \
-		toe-agent \
-		6020 \
-		${PLUGIN_DIR} \
-		YAPPS_EXTRA_AGENTS \
-		${EXTRA_BLEMO_OPTS} \
-		${EXTRA_TIC_HUB_OPTS} \
-		${EXTRA_TIC_DM_OPTS} \
-		"$@"
+	if [ "true" == "$(cat_conf_get_value TICC_UPLOAD_DM_PO false)" ]; then
+		echo -e "-b 'tic-client.uploaders.dm-po.enabled=true'" >> ${TMP_OPTS}
+	else
+		echo -e "-b 'tic-client.uploaders.dm-po.enabled=false'" >> ${TMP_OPTS}
+	fi
+
+	local OPTS=$(cat ${TMP_OPTS} | tr '\n' ' ')
+	rm -f ${TMP_OPTS}
+
+	DOCKER_IMAGE_VERSION=${TOE_AGENT_VERSION} \
+		DOCKER_IMAGE_CONF=${TOE_AGENT_CONF} \
+		${SCRIPT_DIR}/start-yapps-docker \
+			toe-agent \
+			6020 \
+			${PLUGIN_DIR} \
+			YAPPS_EXTRA_AGENTS \
+			${OPTS} \
+			"$@"
 }
 
 function run_with_remote_box {
@@ -67,11 +80,23 @@ function run_with_remote_box {
 	export REMOTE_USER=$(whoami)
 	ssh -oBatchMode=yes ${REMOTE_USER}@${REMOTE} "uname -a" > /dev/null 2>&1; EXIT_CODE=$?
 	if [ "0" != "${EXIT_CODE}" ]; then
-		USER="root"
+		REMOTE_USER="root"
 		ssh -oBatchMode=yes ${REMOTE_USER}@${REMOTE} "uname -a" > /dev/null 2>&1; EXIT_CODE=$?
 		err_exit "${EXIT_CODE}" "either $(whoami) or root is not allowed to SSH login ${REMOTE}"
 	fi
 	echo "${REMOTE} with user ${REMOTE_USER} to login SSH service"
+
+	##
+	# Get `/tmp/cloud.bashrc` from remote box.
+	#
+	local TMP_BASHRC=$(mktemp /tmp/XXXXXX)
+	echo "scp ${REMOTE_USER}@${REMOTE}:/tmp/cloud.bashrc ${TMP_BASHRC}"
+	scp ${REMOTE_USER}@${REMOTE}:/tmp/cloud.bashrc ${TMP_BASHRC} > /dev/null 2>&1; EXIT_CODE=$?
+	err_exit ${EXIT_CODE} "failed to get /tmp/cloud.bashrc"
+	source ${TMP_BASHRC}
+	rm -f ${TMP_BASHRC}
+	echo "${REMOTE}:/tmp/cloud.bashrc is downloaded =>"
+	env | sort | grep "^CLOUD_" | awk '{printf "\t%s\n", $0}'
 
 	##
 	# Get `/tmp/ttt_system` file from remote box.
@@ -91,13 +116,52 @@ function run_with_remote_box {
 	rm -f ${TMP_FILE}
 	echo "${REMOTE}/profile => ${REMOTE_PROFILE}"
 
-	run_agent_server \
-		-s "system-info.remote=${REMOTE}" \
-		-s "communicator.connections.ps_s_data.url=tcp://${REMOTE}:6022" \
-		-s "communicator.connections.ps_p_data.url=tcp://${REMOTE}:6023" \
-		-s "sensorweb3-client.wss.server=http://${REMOTE}:6020" \
-		-s "sensorweb3-client.wss.token=ABCD" \
-		"$@"
+	##
+	# Get profile top directory
+	#
+	local PROFILE_TOPDIR=$(ssh -q ${REMOTE_USER}@${REMOTE} 'echo ${YS_APP_DIR}/profiles/${BOARD_PROFILE}'); EXIT_CODE=$?
+	err_exit ${EXIT_CODE} "failed to get the top directory of all profile versions from ${REMOTE}"
+	echo "${REMOTE}/mnt => ${PROFILE_TOPDIR}"
+
+	##
+	# Get deployment configuration of current profile: production, testing, or development
+	#
+	local PROFILE_ENV=$(ssh -q ${REMOTE_USER}@${REMOTE} "cat ${PROFILE_TOPDIR}/env"); EXIT_CODE=$?
+	err_exit ${EXIT_CODE} "failed to get deployment environment from ${REMOTE}"
+	echo "${REMOTE}/env => ${PROFILE_ENV}"
+
+	##
+	# Get entry version of current profile.
+	#
+	local PROFILE_VERSION=$(ssh -q ${REMOTE_USER}@${REMOTE} "cat ${PROFILE_TOPDIR}/entry"); EXIT_CODE=$?
+	err_exit ${EXIT_CODE} "failed to get the entry version of current profile archive from ${REMOTE}"
+	echo "${REMOTE}/entry => ${PROFILE_VERSION}"
+
+	##
+	# Get the version of ToeAgent in current profile directory.
+	#
+	local TOE_AGENT_VERSION=$(ssh -q ${REMOTE_USER}@${REMOTE} "cat ${PROFILE_TOPDIR}/${PROFILE_VERSION}/apps/toe-agent/package.json | jq -r '.version'"); EXIT_CODE=$?
+	err_exit ${EXIT_CODE} "failed to get the version of ToeAgent in profile archive from ${REMOTE}"
+	echo "${REMOTE}/toe-agent => ${TOE_AGENT_VERSION}"
+
+	##
+	# Download toe-agent/config/xxx.json configuration files from remote box.
+	#
+	local TOE_AGENT_CONF="/tmp/toe-agent.conf.json"
+	scp ${REMOTE_USER}@${REMOTE}:/${PROFILE_TOPDIR}/${PROFILE_VERSION}/apps/toe-agent/config/${PROFILE_ENV}.json ${TOE_AGENT_CONF} > /dev/null 2>&1; EXIT_CODE=$?
+	err_exit ${EXIT_CODE} "failed to get config/${PROFILE_ENV}.json of ToeAgent from ${REMOTE}"
+	echo "${REMOTE}/toe-agent/config/${PROFILE_ENV}.json =>"
+	cat ${TOE_AGENT_CONF} | prettyjson --inline-arrays=1 | awk '{printf "\t%s\n", $0}'
+
+	TOE_AGENT_VERSION=${TOE_AGENT_VERSION} \
+		TOE_AGENT_CONF=${TOE_AGENT_CONF} \
+			run_agent_server \
+			-s "system-info.remote=${REMOTE}" \
+			-s "communicator.connections.ps_s_data.url=tcp://${REMOTE}:6022" \
+			-s "communicator.connections.ps_p_data.url=tcp://${REMOTE}:6023" \
+			-s "sensorweb3-client.wss.server=http://${REMOTE}:6020" \
+			-s "sensorweb3-client.wss.token=ABCD" \
+			"$@"
 }
 
 function fn_exist {
@@ -127,7 +191,13 @@ function wrapper {
 	export SCRIPT_DIR=$(pwd)
 	cd ${CURRENT}
 
-	fn_exist ${FUNC} && ${FUNC} $@ || echo "no such function: ${FUNC}"
+	if fn_exist ${FUNC}; then
+		${FUNC} $@
+	else
+		echo "no such function: ${FUNC}"
+	fi
 }
 
+export CONF=$0.yml
+check_prerequisites
 wrapper $@

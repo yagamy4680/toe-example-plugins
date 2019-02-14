@@ -1,0 +1,26 @@
+{
+  "name": "agent-demo1",
+  "author": {
+    "name": [
+      "Yagamy"
+    ],
+    "email": "yagamy@gmail.com"
+  },
+  "description": "A demo for agent in ToeAgent plugin framework",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "main": "lib/agent.js",
+  "engines": {
+    "node": "0.10.x",
+    "npm": "1.4.x"
+  },
+  "dependencies": {},
+  "scripts": {
+    "build": "find src -name '*.ls' | xargs -I{} sh -c \"echo compiling {} ...; cat {} | lsc -cp > lib/\\$(basename {} .ls).js\""
+  },
+  "devDependencies": {},
+  "optionalDependencies": {}
+}
