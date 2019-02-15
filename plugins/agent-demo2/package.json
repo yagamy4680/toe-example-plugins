@@ -1,0 +1,24 @@
+{
+  "name": "agent-demo1",
+  "author": {
+    "name": [
+      "Yagamy"
+    ],
+    "email": "yagamy@gmail.com"
+  },
+  "description": "A demo for agent in ToeAgent plugin framework",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "main": "lib/agent.js",
+  "engines": {
+    "node": "0.10.x",
+    "npm": "1.4.x"
+  },
+  "dependencies": {},
+  "scripts": {},
+  "devDependencies": {},
+  "optionalDependencies": {}
+}

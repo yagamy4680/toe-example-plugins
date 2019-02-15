@@ -47,7 +47,7 @@ function run_agent_server {
 		DOCKER_IMAGE_CONF=${TOE_AGENT_CONF} \
 		${SCRIPT_DIR}/start-yapps-docker \
 			toe-agent \
-			6020 \
+			6040 \
 			${PLUGIN_DIR} \
 			YAPPS_EXTRA_AGENTS \
 			${OPTS} \

@@ -1,14 +1,3 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [demo1](#demo1)
-  - [Build](#build)
-  - [Setup and Installation](#setup-and-installation)
-  - [Run](#run)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 # demo1
 
 This agent demonstrates how to implement [Agent](../../docs/agent.ls) with simple logic (showing the CPU percentages on Emoji display of a box with TOE 3.0+ software), so the app can be loaded by ToeAgent as a plugin to execute:
