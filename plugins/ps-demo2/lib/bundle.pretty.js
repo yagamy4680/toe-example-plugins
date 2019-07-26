@@ -48,91 +48,111 @@
             module.exports = {
                 manifest: {
                     format: 2,
-                    created_at: "2018-10-11T19:19:03.293Z",
                     name: "demo2",
-                    version: "0.0.1"
+                    version: "0.0.1",
+                    created_at: "2019-07-26T20:24:04.600Z",
+                    checksum: "9fd30a4adbef9680eece4baeea96c14d3a26e2cc0b753765955963510b684353"
                 },
-                peripheral_types: [ {
-                    p_type: "schema_base_class",
-                    p_type_parent: null,
-                    class_name: "SchemaBaseClass",
-                    sensor_types: []
-                }, {
-                    p_type: "nodejs_process",
-                    p_type_parent: "schema_base_class",
-                    class_name: "NodejsProcess",
-                    sensor_types: [ {
-                        s_type: "cpu",
-                        instances: [ {
-                            s_id: "0",
-                            annotations: {}
-                        } ],
-                        fields: [ {
-                            name: "user",
-                            writeable: false,
-                            value: {
-                                type: "int",
-                                range: [ 0, 4294967296 ]
-                            },
-                            unit: "bytes",
-                            annotations: {}
-                        }, {
-                            name: "system",
-                            writeable: false,
-                            value: {
-                                type: "int",
-                                range: [ 0, 4294967296 ]
-                            },
-                            unit: "bytes",
-                            annotations: {}
-                        } ],
-                        actions: []
+                content: {
+                    peripheral_types: [ {
+                        p_type: "schema_base_class",
+                        p_type_parent: null,
+                        class_name: "SchemaBaseClass",
+                        sensor_types: []
                     }, {
-                        s_type: "memory",
-                        instances: [ {
-                            s_id: "0",
-                            annotations: {}
-                        } ],
-                        fields: [ {
-                            name: "rss",
-                            writeable: false,
-                            value: {
-                                type: "int",
-                                range: [ 0, 4294967296 ]
-                            },
-                            unit: "bytes",
-                            annotations: {}
+                        p_type: "nodejs_process",
+                        p_type_parent: "schema_base_class",
+                        class_name: "NodejsProcess",
+                        sensor_types: [ {
+                            s_type: "cpu",
+                            s_identities: [ "0" ],
+                            fields: [ {
+                                name: "user",
+                                writeable: false,
+                                value: {
+                                    type: "int",
+                                    range: [ 0, 4294967296 ]
+                                },
+                                unit: "bytes",
+                                annotations: {}
+                            }, {
+                                name: "system",
+                                writeable: false,
+                                value: {
+                                    type: "int",
+                                    range: [ 0, 4294967296 ]
+                                },
+                                unit: "bytes",
+                                annotations: {}
+                            } ],
+                            actions: []
                         }, {
-                            name: "heapTotal",
-                            writeable: false,
-                            value: {
-                                type: "int",
-                                range: [ 0, 4294967296 ]
-                            },
-                            unit: "bytes",
-                            annotations: {}
+                            s_type: "memory",
+                            s_identities: [ "0" ],
+                            fields: [ {
+                                name: "rss",
+                                writeable: false,
+                                value: {
+                                    type: "int",
+                                    range: [ 0, 4294967296 ]
+                                },
+                                unit: "bytes",
+                                annotations: {}
+                            }, {
+                                name: "heapTotal",
+                                writeable: false,
+                                value: {
+                                    type: "int",
+                                    range: [ 0, 4294967296 ]
+                                },
+                                unit: "bytes",
+                                annotations: {}
+                            }, {
+                                name: "heapUsed",
+                                writeable: false,
+                                value: {
+                                    type: "int",
+                                    range: [ 0, 4294967296 ]
+                                },
+                                unit: "bytes",
+                                annotations: {}
+                            }, {
+                                name: "external",
+                                writeable: false,
+                                value: {
+                                    type: "int",
+                                    range: [ 0, 4294967296 ]
+                                },
+                                unit: "bytes",
+                                annotations: {}
+                            } ],
+                            actions: []
                         }, {
-                            name: "heapUsed",
-                            writeable: false,
-                            value: {
-                                type: "int",
-                                range: [ 0, 4294967296 ]
-                            },
-                            unit: "bytes",
-                            annotations: {}
-                        }, {
-                            name: "external",
-                            writeable: false,
-                            value: {
-                                type: "int",
-                                range: [ 0, 4294967296 ]
-                            },
-                            unit: "bytes",
-                            annotations: {}
-                        } ],
-                        actions: []
+                            s_type: "os",
+                            s_identities: [ "current" ],
+                            fields: [ {
+                                name: "freeMemory",
+                                writeable: false,
+                                value: {
+                                    type: "int",
+                                    range: [ 0, 4294967296 ]
+                                },
+                                unit: "bytes",
+                                annotations: {}
+                            }, {
+                                name: "uptime",
+                                writeable: false,
+                                value: {
+                                    type: "int",
+                                    range: [ 0, 4294967296 ]
+                                },
+                                unit: "seconds",
+                                annotations: {}
+                            } ],
+                            actions: []
+                        } ]
                     } ]
-                } ]
+                }
             };
         }, {} ],
         2: [ function(require, module, exports) {
@@ -149,6 +169,8 @@
                         INFO(`name => ${this.name}`);
                         INFO(`types => ${JSON.stringify(this.types)}`);
                         INFO(`schema => \n${JSON.stringify(this.schema)}`);
+                        this.state_index = 0;
+                        this.states = [ RELATIONSHIP_MANAGED, RELATIONSHIP_CONFIGURED ];
                     }
                     updatePeripheralState() {
                         var os = require("os");
@@ -158,7 +180,8 @@
                             os_uptime: os.uptime(),
                             os_platform: os.platform()
                         };
-                        this.emitPeripheralState(this.types[0], this.pid, RELATIONSHIP_MANAGED, metadata);
+                        this.emitPeripheralState(this.types[0], this.pid, this.states[this.state_index % this.states.length], metadata);
+                        this.state_index = this.state_index + 1;
                     }
                     processMonitorData(s_type, s_id, data) {
                         this.emitData(this.types[0], this.pid, s_type, s_id, data);
@@ -170,6 +193,9 @@
                         var MemoryMonitor = require("./monitors/memory");
                         var memory = new MemoryMonitor(1e4);
                         this.monitors.push(memory);
+                        var OsMonitor = require("./monitors/os");
+                        var osm = new OsMonitor(5e3);
+                        this.monitors.push(osm);
                         var self = this;
                         this.monitors.forEach(m => {
                             INFO(`add data listener for monitors[${m.getName().yellow}]`);
@@ -211,6 +237,7 @@
         }, {
             "./monitors/cpu": 4,
             "./monitors/memory": 5,
+            "./monitors/os": 6,
             "./schema.json": 1,
             os: undefined,
             path: undefined
@@ -283,6 +310,29 @@
             module.exports = exports = MemoryMonitor;
         }, {
             "./base": 3
+        } ],
+        6: [ function(require, module, exports) {
+            "use strict";
+            var BaseMonitor = require("./base");
+            var os = require("os");
+            class OsMonitor extends BaseMonitor {
+                constructor(interval) {
+                    super(interval);
+                    this.name = "os";
+                }
+                capture() {
+                    var freeMemory = os.freemem();
+                    var uptime = os.uptime();
+                    this.emit("data-updated", "os", "current", {
+                        freeMemory,
+                        uptime
+                    });
+                }
+            }
+            module.exports = exports = OsMonitor;
+        }, {
+            "./base": 3,
+            os: undefined
         } ]
     }, {}, [ 2 ])(2);
 });

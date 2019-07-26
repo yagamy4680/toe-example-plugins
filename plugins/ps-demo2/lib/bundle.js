@@ -2,127 +2,159 @@
 module.exports={
  "manifest": {
   "format": 2,
-  "created_at": "2018-10-11T19:19:03.293Z",
   "name": "demo2",
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "created_at": "2019-07-26T20:24:04.600Z",
+  "checksum": "9fd30a4adbef9680eece4baeea96c14d3a26e2cc0b753765955963510b684353"
  },
- "peripheral_types": [
-  {
-   "p_type": "schema_base_class",
-   "p_type_parent": null,
-   "class_name": "SchemaBaseClass",
-   "sensor_types": []
-  },
-  {
-   "p_type": "nodejs_process",
-   "p_type_parent": "schema_base_class",
-   "class_name": "NodejsProcess",
-   "sensor_types": [
-    {
-     "s_type": "cpu",
-     "instances": [
-      {
-       "s_id": "0",
-       "annotations": {}
-      }
-     ],
-     "fields": [
-      {
-       "name": "user",
-       "writeable": false,
-       "value": {
-        "type": "int",
-        "range": [
-         0,
-         4294967296
-        ]
+ "content": {
+  "peripheral_types": [
+   {
+    "p_type": "schema_base_class",
+    "p_type_parent": null,
+    "class_name": "SchemaBaseClass",
+    "sensor_types": []
+   },
+   {
+    "p_type": "nodejs_process",
+    "p_type_parent": "schema_base_class",
+    "class_name": "NodejsProcess",
+    "sensor_types": [
+     {
+      "s_type": "cpu",
+      "s_identities": [
+       "0"
+      ],
+      "fields": [
+       {
+        "name": "user",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
        },
-       "unit": "bytes",
-       "annotations": {}
-      },
-      {
-       "name": "system",
-       "writeable": false,
-       "value": {
-        "type": "int",
-        "range": [
-         0,
-         4294967296
-        ]
+       {
+        "name": "system",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
+       }
+      ],
+      "actions": []
+     },
+     {
+      "s_type": "memory",
+      "s_identities": [
+       "0"
+      ],
+      "fields": [
+       {
+        "name": "rss",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
        },
-       "unit": "bytes",
-       "annotations": {}
-      }
-     ],
-     "actions": []
-    },
-    {
-     "s_type": "memory",
-     "instances": [
-      {
-       "s_id": "0",
-       "annotations": {}
-      }
-     ],
-     "fields": [
-      {
-       "name": "rss",
-       "writeable": false,
-       "value": {
-        "type": "int",
-        "range": [
-         0,
-         4294967296
-        ]
+       {
+        "name": "heapTotal",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
        },
-       "unit": "bytes",
-       "annotations": {}
-      },
-      {
-       "name": "heapTotal",
-       "writeable": false,
-       "value": {
-        "type": "int",
-        "range": [
-         0,
-         4294967296
-        ]
+       {
+        "name": "heapUsed",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
        },
-       "unit": "bytes",
-       "annotations": {}
-      },
-      {
-       "name": "heapUsed",
-       "writeable": false,
-       "value": {
-        "type": "int",
-        "range": [
-         0,
-         4294967296
-        ]
+       {
+        "name": "external",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
+       }
+      ],
+      "actions": []
+     },
+     {
+      "s_type": "os",
+      "s_identities": [
+       "current"
+      ],
+      "fields": [
+       {
+        "name": "freeMemory",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
        },
-       "unit": "bytes",
-       "annotations": {}
-      },
-      {
-       "name": "external",
-       "writeable": false,
-       "value": {
-        "type": "int",
-        "range": [
-         0,
-         4294967296
-        ]
-       },
-       "unit": "bytes",
-       "annotations": {}
-      }
-     ],
-     "actions": []
-    }
-   ]
-  }
- ]
+       {
+        "name": "uptime",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "seconds",
+        "annotations": {}
+       }
+      ],
+      "actions": []
+     }
+    ]
+   }
+  ]
+ }
 }
 },{}],2:[function(require,module,exports){
 (function (__filename){
@@ -151,11 +183,11 @@ class Service extends PeripheralService {
         /**
          * With the given schema.json (compiled from schema.ls), following 3 member fields
          * of current service object is set:
-         *  
+         *
          *  - this.name     (from `schema.json:manifest/name`)
          *  - this.types    (from `schema.json:peripheral_types`)
-         * 
-         * So, service object doesn't need to initialize `name` and `types` 
+         *
+         * So, service object doesn't need to initialize `name` and `types`
          * variables in constructor anymore.
          */
         // this.name = 'ps-demo2';
@@ -166,6 +198,8 @@ class Service extends PeripheralService {
         INFO(`name => ${this.name}`);
         INFO(`types => ${JSON.stringify(this.types)}`);
         INFO(`schema => \n${JSON.stringify(this.schema)}`);
+        this.state_index = 0;
+        this.states = [RELATIONSHIP_MANAGED, RELATIONSHIP_CONFIGURED];
     }
 
     updatePeripheralState() {
@@ -176,7 +210,8 @@ class Service extends PeripheralService {
             'os_uptime': os.uptime(),
             'os_platform': os.platform()
         };
-        this.emitPeripheralState(this.types[0], this.pid, RELATIONSHIP_MANAGED, metadata);
+        this.emitPeripheralState(this.types[0], this.pid, this.states[this.state_index % this.states.length], metadata);
+        this.state_index = this.state_index + 1;
     }
 
     processMonitorData(s_type, s_id, data) {
@@ -196,9 +231,9 @@ class Service extends PeripheralService {
          * the init() shall be responsible for initializing the Bluetooth LE protocol stack
          * on Linux (or establish connection with another process which is a dedicated Bluetooth
          * daemon).
-         * 
-         * Please don't perform sensor data or peripheral state updates within this function. 
-         * Please perform sensor data updates and peripheral state updates after `atRegistered()` is 
+         *
+         * Please don't perform sensor data or peripheral state updates within this function.
+         * Please perform sensor data updates and peripheral state updates after `atRegistered()` is
          * called.
          */
 
@@ -211,6 +246,11 @@ class Service extends PeripheralService {
         var MemoryMonitor = require('./monitors/memory');
         var memory = new MemoryMonitor(10000);
         this.monitors.push(memory);
+
+        /* Keep updating OS information as sensor data, every 5 seconds. */
+        var OsMonitor = require('./monitors/os');
+        var osm = new OsMonitor(5000);
+        this.monitors.push(osm);
 
         /* Listen to data updates of each monitor */
         var self = this;
@@ -245,9 +285,9 @@ class Service extends PeripheralService {
         INFO("the peripheral service is registered ...");
 
         /**
-         * Update the only one peripheral every 60 seconds. Please note, typically the 
-         * peripheral state update is not so frequent. Here we just show how to update 
-         * peripheral state with metadata to SensorWeb3, so ToeAgent or other apps can 
+         * Update the only one peripheral every 60 seconds. Please note, typically the
+         * peripheral state update is not so frequent. Here we just show how to update
+         * peripheral state with metadata to SensorWeb3, so ToeAgent or other apps can
          * process the state with metadata.
          */
         var self = this;
@@ -326,7 +366,7 @@ class Service extends PeripheralService {
 
 module.exports = exports = Service;
 }).call(this,require("path").join(__dirname,"src","index.js"))
-},{"./monitors/cpu":4,"./monitors/memory":5,"./schema.json":1,"os":undefined,"path":undefined}],3:[function(require,module,exports){
+},{"./monitors/cpu":4,"./monitors/memory":5,"./monitors/os":6,"./schema.json":1,"os":undefined,"path":undefined}],3:[function(require,module,exports){
 'use strict';
 
 const EventEmitter = require('events');
@@ -413,5 +453,25 @@ class MemoryMonitor extends BaseMonitor {
 }
 
 module.exports = exports = MemoryMonitor;
-},{"./base":3}]},{},[2])(2)
+},{"./base":3}],6:[function(require,module,exports){
+'use strict';
+
+var BaseMonitor = require('./base');
+var os = require('os');
+
+class OsMonitor extends BaseMonitor {
+    constructor(interval) {
+        super(interval);
+        this.name = 'os';
+    }
+
+    capture() {
+        var freeMemory = os.freemem();
+        var uptime = os.uptime();
+        this.emit('data-updated', 'os', 'current', {freeMemory, uptime});
+    }
+}
+
+module.exports = exports = OsMonitor;
+},{"./base":3,"os":undefined}]},{},[2])(2)
 });

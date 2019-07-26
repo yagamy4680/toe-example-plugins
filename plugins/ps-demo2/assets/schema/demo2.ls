@@ -2,15 +2,36 @@
 /** --------------------------------------- */
 class SchemaBaseClass
   ->
-    @sensors = {}
-    @actuators = {}
+    @sensor_identities = {}
+    @sensor_actuator_actions = {}
+    @annotation_stores = {}
 
-  declare-sensors: (types-and-identities) ->
-    self = @
-    for st, identities of types-and-identities
-      self.sensors[st] = {}
-      for id in identities
-        self.sensors[st][id] = {}
+  ##
+  # `s_type`, the sensor type
+  # `identities`, the list of possible s_id for the specific sensor type
+  #
+  declareSensorIdentities: (s_type, identities) ->
+    @sensor_identities[s_type] = identities
+    return @
+
+  ##
+  # `s_type`, the sensor type
+  # `actions`, the list of actuator actions for the specific sensor type,
+  #             that cannot be a simple writeable sensor field.
+  #
+  declareSensorActuatorActions: (s_type, actions) ->
+    @sensor_actuator_actions[s_type] = actions
+    return @
+
+  ##
+  # `p`, the data-path for annotations in the store; `null` means the annotations for the peripheral-type.
+  # `a`, the annotations.
+  #
+  declareAnnotations: (p, annotations) ->
+    p = '/' unless p?
+    p = "/#{p}" unless p.startsWith '/'
+    @annotation_stores[p] = annotations
+    return @
 
 
 SchemaBaseClass = SCHEMA_BASE_CLASS if SCHEMA_BASE_CLASS?
@@ -39,13 +60,14 @@ class NodejsProcess extends SchemaBaseClass
 
   ->
     super!
-    ##
-    # Declare the number of sensors and their count and types.
-    #
-    @.declare-sensors do
-      cpu   : <[0]>
-      memory: <[0]>
-      os    : <[current]>
+    @
+      ##
+      # Declare the instances (with unique identities) of each sensor type
+      #
+      .declareSensorIdentities \cpu     , <[0]>
+      .declareSensorIdentities \memory  , <[0]>
+      .declareSensorIdentities \os      , <[current]>
+
 
 ##
 # The root classes to be exported. Schema parser or SensorWeb shall read the list

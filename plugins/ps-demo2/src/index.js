@@ -23,11 +23,11 @@ class Service extends PeripheralService {
         /**
          * With the given schema.json (compiled from schema.ls), following 3 member fields
          * of current service object is set:
-         *  
+         *
          *  - this.name     (from `schema.json:manifest/name`)
          *  - this.types    (from `schema.json:peripheral_types`)
-         * 
-         * So, service object doesn't need to initialize `name` and `types` 
+         *
+         * So, service object doesn't need to initialize `name` and `types`
          * variables in constructor anymore.
          */
         // this.name = 'ps-demo2';
@@ -71,9 +71,9 @@ class Service extends PeripheralService {
          * the init() shall be responsible for initializing the Bluetooth LE protocol stack
          * on Linux (or establish connection with another process which is a dedicated Bluetooth
          * daemon).
-         * 
-         * Please don't perform sensor data or peripheral state updates within this function. 
-         * Please perform sensor data updates and peripheral state updates after `atRegistered()` is 
+         *
+         * Please don't perform sensor data or peripheral state updates within this function.
+         * Please perform sensor data updates and peripheral state updates after `atRegistered()` is
          * called.
          */
 
@@ -125,9 +125,9 @@ class Service extends PeripheralService {
         INFO("the peripheral service is registered ...");
 
         /**
-         * Update the only one peripheral every 60 seconds. Please note, typically the 
-         * peripheral state update is not so frequent. Here we just show how to update 
-         * peripheral state with metadata to SensorWeb3, so ToeAgent or other apps can 
+         * Update the only one peripheral every 60 seconds. Please note, typically the
+         * peripheral state update is not so frequent. Here we just show how to update
+         * peripheral state with metadata to SensorWeb3, so ToeAgent or other apps can
          * process the state with metadata.
          */
         var self = this;

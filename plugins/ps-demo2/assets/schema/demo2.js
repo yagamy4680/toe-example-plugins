@@ -7,23 +7,27 @@
     SchemaBaseClass.displayName = 'SchemaBaseClass';
     var prototype = SchemaBaseClass.prototype, constructor = SchemaBaseClass;
     function SchemaBaseClass(){
-      this.sensors = {};
-      this.actuators = {};
+      this.sensor_identities = {};
+      this.sensor_actuator_actions = {};
+      this.annotation_stores = {};
     }
-    SchemaBaseClass.prototype.declareSensors = function(typesAndIdentities){
-      var self, st, identities, lresult$, i$, len$, id, results$ = [];
-      self = this;
-      for (st in typesAndIdentities) {
-        identities = typesAndIdentities[st];
-        lresult$ = [];
-        self.sensors[st] = {};
-        for (i$ = 0, len$ = identities.length; i$ < len$; ++i$) {
-          id = identities[i$];
-          lresult$.push(self.sensors[st][id] = {});
-        }
-        results$.push(lresult$);
+    SchemaBaseClass.prototype.declareSensorIdentities = function(s_type, identities){
+      this.sensor_identities[s_type] = identities;
+      return this;
+    };
+    SchemaBaseClass.prototype.declareSensorActuatorActions = function(s_type, actions){
+      this.sensor_actuator_actions[s_type] = actions;
+      return this;
+    };
+    SchemaBaseClass.prototype.declareAnnotations = function(p, annotations){
+      if (p == null) {
+        p = '/';
       }
-      return results$;
+      if (!p.startsWith('/')) {
+        p = "/" + p;
+      }
+      this.annotation_stores[p] = annotations;
+      return this;
     };
     return SchemaBaseClass;
   }());
@@ -81,11 +85,7 @@
     ];
     function NodejsProcess(){
       NodejsProcess.superclass.call(this);
-      this.declareSensors({
-        cpu: ['0'],
-        memory: ['0'],
-        os: ['current']
-      });
+      this.declareSensorIdentities('cpu', ['0']).declareSensorIdentities('memory', ['0']).declareSensorIdentities('os', ['current']);
     }
     return NodejsProcess;
   }(SchemaBaseClass));

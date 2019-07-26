@@ -17,20 +17,147 @@ const MODE_META = 2            # settings: {types: [...]}
 const MODES = {MODE_STANDALONE, MODE_PIPE, MODE_META}
 
 
+##
+# PeripheralService
+#
+# The abstract class of service (driver) for SensorWeb (TOE) to communicate and interact with
+# equipments in physical world (or objects in digital world). In every subclass of `PeripheralService`
+# it's suggested to implement these methods to manage the lifecycle/state of the service (driver):
+#
+#   - constructor
+#       * environment initialization without asynchronous operations
+#       * please ensure member variables `name` and `types` are initialized (or use `schema` to initialize `name` and `types` variables)
+#
+#   - init: (done)
+#       * environment initialization with asynchronous operations, e.g. use socket to connect to another daemon
+#
+#   - at-registered
+#       * called when the service is successfully registered to SensorWeb
+#       * following methods start to be called
+#           # perform-action: (p_type, p_id, a_type, a_id, action, arg1, arg2, arg3, done)
+#           # process-web-command: (remote, command, parameters, context, done)
+#       * following methods can be used after this callback
+#           # emit-data: (p_type, p_id, s_type, s_id, points, timestamp=null)
+#           # emit-peripheral-state: (p_type, p_id, relationship, metadata)
+#
+#   - at-pipe-established
+#       * called when the socket pipe between service and remote server is successfully established
+#       * following methods start to be called
+#           # at-pipe-data: (name, data, byline=yes)
+#       * following methods can be used after this callback
+#           # emit-pipe-data: (name, data)
+#
+#   - fini: (done)
+#       * environment finalization with asynchronous operations, e.g. disconnect from remote daemon
+#       * the method is only invoked when SensorWeb is going to shutdown
+#
+#
+# Please don't change the implementation of following methods:
+#   * get-name
+#   * get-supported-types
+#   * get-description
+#   * to-json
+#   * on: (event, listener)
+#   * remove-listener: (event, listener)
+#   * emit-data: (p_type, p_id, s_type, s_id, points, timestamp=null)
+#   * emit-peripheral-state: (p_type, p_id, relationship, metadata)
+#   * emit-pipe-data: (name, data)
+#   * now
+#
+#
+###
+# Loose Schema v.s. Strict Schema
+#
+# Before SensorWeb v3.9.0, the schema for sensor data update and actuator action request only supports
+# `loose` schema. Simply speaking, no data validation in SensorWeb except `p_type`. In other words,
+# as long as the `p_id` for sensor data update and actuator action request is in the list of `types` of
+# PeripheralService, SensorWeb accept all of them. For example,
+#
+#       constructor(opts, uptime, pmodule) {
+#         super(opts, uptime, pmodule);
+#         this.types = ['aaa', 'bbb', 'ccc'];
+#       }
+#
+#       1. aaa / [p_id] / [s_type] / [s_id] / {field-sets}
+#       2. bbb / [p_id] / [s_type] / [s_id] / {field-sets}
+#       3. ccc / [p_id] / [s_type] / [s_id] / {field-sets}
+#       4. ddd / [p_id] / [s_type] / [s_id] / {field-sets}
+#
+#    When a peripheral-service specifies its supported p_types are `aaa`, `bbb`, `ccc`, above
+#    use-cases 1 ~ 3 are acceptable for SensorWeb, only 4 is unacceptable.
+#
+#
+#
+# Since SensorWeb 3.9.0, strict schema for validating sensor data updates and actuator action requests
+# is supported. The schema source code shall be written in [Livescript](http://livescript.net/), and
+# compiled with [tic-data-toolkit](https://github.com/t2t-io/tic-data-toolkit). Then, the compiled schema
+# (IR in json format) shall be loaded at the constructor of PeripheralService in order to inform SensorWeb
+# to apply strict data validation. For example,
+#
+#       constructor(opts, uptime, pmodule) {
+#         super(opts, uptime, pmodule, require('./schema.json'));
+#         // no need to specify `types` because all peripheral types are specified in schema.
+#         // this.types = [];
+#       }
+#
+# Validation rule is also simple: For a specific p_type, the field sets of sensor data update for the s_type/s_id
+# specified in schema must fulfill these validation criterias:
+#
+#       a. `same` data type
+#       b. `in` data value range / constraints
+#       c. `matched` field keys (no less than field keys defined in schema)
+#
+# So, for example,
+#
+#       X. air_condition / [p_id] / thermo / inside  / {humidity:number, temperature:number}
+#       1. air_condition / [p_id] / thermo / inside  / {humidity:number, temperature:number, detected:bool} => OK
+#       2. air_condition / [p_id] / thermo / inside  / {humidity:number, temperature:bool} => NG
+#       3. air_condition / [p_id] / thermo / inside  / {humidity:number} => NG
+#       4. air_condition / [p_id] / thermo / outside / {humidity:number, temperature:number} => OK
+#       5. air_condition / [p_id] / thermo / outside / {humidity:number} => OK
+#       6. air_condition / [p_id] / dust   / inside  / {pm2p5:number, pm10:number} => OK
+#
+# The schema only defines one p_type `air_condition` with only one sensor (`thermo` / `inside`), as `X` described
+# at above. Then, SensorWeb validates 1 ~ 6 data emittion with following results:
+#
+#       1 is also acceptable although field key `detected` is not specified in schema, but a ~ c criterias are still fulfilled.
+#       2 is unacceptable because SensorWeb expects numeric value for `temperature` but boolean value is emitted.
+#       3 is unacceptable because SensorWeb expects `temperature` field but missing
+#       4 is acceptable because the data update is for another sensor (`thermo`/`outside`) which is not specified in schema
+#       5 is acceptable with same reason as 4.
+#       6 is acceptable with same reason as 4.
+#
+#---------------------------------------------------------------------------------------------------------
+#
 class PeripheralService
   @events = EVENTS
   @relationships = RELATIONSHIPS
   @modes = MODES
 
-  (@opts, @uptime=null, @pmodule=null) ->
+  (@opts, @uptime=null, @pmodule=null, @schema=null) ->
+    @pm = global.get-bundled-modules! .create_module_helper pmodule
+    @ee = new EE!
     @mode = MODE_STANDALONE
     @mode_settings = {}
-    @name = \unknown
     @description = \unknown
+    @name = \unknown
     @types = []
-    @spec = null
-    @ee = new EE!
-    @pm = global.get-bundled-modules! .create_module_helper pmodule
+    return unless schema?
+    throw new Error "unexpected schema object (#{typeof schema})" unless \object is typeof schema
+    {manifest, content} = schema
+    throw new Error "missing manifest field in schema" unless manifest?
+    throw new Error "missing content field in schema" unless content?
+    {name, version, format} = manifest
+    throw new Error "missing manifest/name field in schema" unless name? and \string is typeof name
+    throw new Error "missing manifest/version field in schema" unless version? and \string is typeof version
+    throw new Error "missing manifest/format field in schema" unless format? and \number is typeof format
+    throw new Error "unexpected manifest/format field (#{format}) in schema" unless format >= 2
+    @name = name
+    {peripheral_types} = content
+    throw new Error "missing peripheral_types field in schema" unless peripheral_types?
+    xs = [ p.p_type for p in peripheral_types when p.p_type_parent? ]
+    throw new Error "missing valid classes in peripheral_types in schema" unless xs.length > 0
+    @types = xs
 
   ##
   # Initialize the PeripheralService. After initialization, all data/peripheral
@@ -71,12 +198,18 @@ class PeripheralService
     return @description
 
   ##
+  # Get the schema of the peripheral service.
+  #
+  get-schema: ->
+    return @schema
+
+  ##
   # Get all information for the peripheral service, in json object format.
   #
   to-json: ->
-    {name, types, description, mode, mode_settings, spec} = @
+    {name, types, description, mode, mode_settings} = @
     peripheral_types = types
-    return {name, peripheral_types, description, mode, mode_settings, spec}
+    return {name, peripheral_types, description, mode, mode_settings}
 
   ##
   # Get the unit-length of the specific data measured by the sensor (`sensor_type`) on

@@ -42,7 +42,7 @@ function run_sensorweb3 {
 			6020,6021,6022,6023,6024 \
 			${PLUGIN_DIR} \
 			YAPPS_EXTRA_PERIPHERAL_SERVICES \
-			-b "ps-manager.handlers.console.enabled=true"
+			-b "ps-manager.handlers.console.enabled=true" \
 			"$@"
 }
 

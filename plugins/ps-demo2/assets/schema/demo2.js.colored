@@ -7,23 +7,27 @@
       [37mSchemaBaseClass[39m[32m.[39m[37mdisplayName[39m [93m=[39m [92m'SchemaBaseClass'[39m[90m;[39m
       [32mvar[39m [37mprototype[39m [93m=[39m [37mSchemaBaseClass[39m[32m.[39m[37mprototype[39m[32m,[39m [37mconstructor[39m [93m=[39m [37mSchemaBaseClass[39m[90m;[39m
       [94mfunction[39m [37mSchemaBaseClass[39m[90m([39m[90m)[39m[33m{[39m
-        [91mthis[39m[32m.[39m[37msensors[39m [93m=[39m [33m{[39m[33m}[39m[90m;[39m
-        [91mthis[39m[32m.[39m[37mactuators[39m [93m=[39m [33m{[39m[33m}[39m[90m;[39m
+        [91mthis[39m[32m.[39m[37msensor_identities[39m [93m=[39m [33m{[39m[33m}[39m[90m;[39m
+        [91mthis[39m[32m.[39m[37msensor_actuator_actions[39m [93m=[39m [33m{[39m[33m}[39m[90m;[39m
+        [91mthis[39m[32m.[39m[37mannotation_stores[39m [93m=[39m [33m{[39m[33m}[39m[90m;[39m
       [33m}[39m
-      [37mSchemaBaseClass[39m[32m.[39m[37mprototype[39m[32m.[39m[37mdeclareSensors[39m [93m=[39m [94mfunction[39m[90m([39m[37mtypesAndIdentities[39m[90m)[39m[33m{[39m
-        [32mvar[39m [91mself[39m[32m,[39m [37mst[39m[32m,[39m [37midentities[39m[32m,[39m [37mlresult$[39m[32m,[39m [37mi$[39m[32m,[39m [37mlen$[39m[32m,[39m [37mid[39m[32m,[39m [37mresults$[39m [93m=[39m [33m[[39m[33m][39m[90m;[39m
-        [91mself[39m [93m=[39m [91mthis[39m[90m;[39m
-        [94mfor[39m [90m([39m[37mst[39m [94min[39m [37mtypesAndIdentities[39m[90m)[39m [33m{[39m
-          [37midentities[39m [93m=[39m [37mtypesAndIdentities[39m[33m[[39m[37mst[39m[33m][39m[90m;[39m
-          [37mlresult$[39m [93m=[39m [33m[[39m[33m][39m[90m;[39m
-          [91mself[39m[32m.[39m[37msensors[39m[33m[[39m[37mst[39m[33m][39m [93m=[39m [33m{[39m[33m}[39m[90m;[39m
-          [94mfor[39m [90m([39m[37mi$[39m [93m=[39m [34m0[39m[32m,[39m [37mlen$[39m [93m=[39m [37midentities[39m[32m.[39m[37mlength[39m[90m;[39m [37mi$[39m [93m<[39m [37mlen$[39m[90m;[39m [93m++[39m[37mi$[39m[90m)[39m [33m{[39m
-            [37mid[39m [93m=[39m [37midentities[39m[33m[[39m[37mi$[39m[33m][39m[90m;[39m
-            [37mlresult$[39m[32m.[39m[37mpush[39m[90m([39m[91mself[39m[32m.[39m[37msensors[39m[33m[[39m[37mst[39m[33m][39m[33m[[39m[37mid[39m[33m][39m [93m=[39m [33m{[39m[33m}[39m[90m)[39m[90m;[39m
-          [33m}[39m
-          [37mresults$[39m[32m.[39m[37mpush[39m[90m([39m[37mlresult$[39m[90m)[39m[90m;[39m
+      [37mSchemaBaseClass[39m[32m.[39m[37mprototype[39m[32m.[39m[37mdeclareSensorIdentities[39m [93m=[39m [94mfunction[39m[90m([39m[37ms_type[39m[32m,[39m [37midentities[39m[90m)[39m[33m{[39m
+        [91mthis[39m[32m.[39m[37msensor_identities[39m[33m[[39m[37ms_type[39m[33m][39m [93m=[39m [37midentities[39m[90m;[39m
+        [31mreturn[39m [91mthis[39m[90m;[39m
+      [33m}[39m[90m;[39m
+      [37mSchemaBaseClass[39m[32m.[39m[37mprototype[39m[32m.[39m[37mdeclareSensorActuatorActions[39m [93m=[39m [94mfunction[39m[90m([39m[37ms_type[39m[32m,[39m [37mactions[39m[90m)[39m[33m{[39m
+        [91mthis[39m[32m.[39m[37msensor_actuator_actions[39m[33m[[39m[37ms_type[39m[33m][39m [93m=[39m [37mactions[39m[90m;[39m
+        [31mreturn[39m [91mthis[39m[90m;[39m
+      [33m}[39m[90m;[39m
+      [37mSchemaBaseClass[39m[32m.[39m[37mprototype[39m[32m.[39m[37mdeclareAnnotations[39m [93m=[39m [94mfunction[39m[90m([39m[37mp[39m[32m,[39m [37mannotations[39m[90m)[39m[33m{[39m
+        [94mif[39m [90m([39m[37mp[39m [93m==[39m [90mnull[39m[90m)[39m [33m{[39m
+          [37mp[39m [93m=[39m [92m'/'[39m[90m;[39m
         [33m}[39m
-        [31mreturn[39m [37mresults$[39m[90m;[39m
+        [94mif[39m [90m([39m[93m![39m[37mp[39m[32m.[39m[37mstartsWith[39m[90m([39m[92m'/'[39m[90m)[39m[90m)[39m [33m{[39m
+          [37mp[39m [93m=[39m [92m"/"[39m [93m+[39m [37mp[39m[90m;[39m
+        [33m}[39m
+        [91mthis[39m[32m.[39m[37mannotation_stores[39m[33m[[39m[37mp[39m[33m][39m [93m=[39m [37mannotations[39m[90m;[39m
+        [31mreturn[39m [91mthis[39m[90m;[39m
       [33m}[39m[90m;[39m
       [31mreturn[39m [37mSchemaBaseClass[39m[90m;[39m
     [33m}[39m[90m([39m[90m)[39m[90m)[39m[90m;[39m
@@ -81,11 +85,7 @@
       [33m][39m[90m;[39m
       [94mfunction[39m [37mNodejsProcess[39m[90m([39m[90m)[39m[33m{[39m
         [37mNodejsProcess[39m[32m.[39m[37msuperclass[39m[32m.[39m[37mcall[39m[90m([39m[91mthis[39m[90m)[39m[90m;[39m
-        [91mthis[39m[32m.[39m[37mdeclareSensors[39m[90m([39m[33m{[39m
-          [37mcpu[39m[93m:[39m [33m[[39m[92m'0'[39m[33m][39m[32m,[39m
-          [37mmemory[39m[93m:[39m [33m[[39m[92m'0'[39m[33m][39m[32m,[39m
-          [37mos[39m[93m:[39m [33m[[39m[92m'current'[39m[33m][39m
-        [33m}[39m[90m)[39m[90m;[39m
+        [91mthis[39m[32m.[39m[37mdeclareSensorIdentities[39m[90m([39m[92m'cpu'[39m[32m,[39m [33m[[39m[92m'0'[39m[33m][39m[90m)[39m[32m.[39m[37mdeclareSensorIdentities[39m[90m([39m[92m'memory'[39m[32m,[39m [33m[[39m[92m'0'[39m[33m][39m[90m)[39m[32m.[39m[37mdeclareSensorIdentities[39m[90m([39m[92m'os'[39m[32m,[39m [33m[[39m[92m'current'[39m[33m][39m[90m)[39m[90m;[39m
       [33m}[39m
       [31mreturn[39m [37mNodejsProcess[39m[90m;[39m
     [33m}[39m[90m([39m[37mSchemaBaseClass[39m[90m)[39m[90m)[39m[90m;[39m
