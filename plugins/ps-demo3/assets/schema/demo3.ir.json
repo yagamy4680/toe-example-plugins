@@ -3,8 +3,8 @@
   "format": 2,
   "name": "demo3",
   "version": "0.0.1",
-  "created_at": "2018-11-16T06:23:22.282Z",
-  "checksum": "60a040c9ba61210cda3552349ffc016bb243ad763da858aed6a8d71747b8722b"
+  "created_at": "2018-11-20T04:59:24.688Z",
+  "checksum": "80c4084d2571ab9acca99f519ce7eb333d267861433469620de4942f64462102"
  },
  "content": {
   "peripheral_types": [
@@ -21,15 +21,8 @@
     "sensor_types": [
      {
       "s_type": "cpu",
-      "instances": [
-       {
-        "s_id": "0",
-        "annotations": {
-         "type": "single",
-         "module": "process",
-         "method": "cpuUsage"
-        }
-       }
+      "s_identities": [
+       "0"
       ],
       "fields": [
        {
@@ -63,15 +56,8 @@
      },
      {
       "s_type": "memory",
-      "instances": [
-       {
-        "s_id": "0",
-        "annotations": {
-         "type": "single",
-         "module": "process",
-         "method": "memoryUsage"
-        }
-       }
+      "s_identities": [
+       "0"
       ],
       "fields": [
        {
@@ -131,13 +117,8 @@
      },
      {
       "s_type": "os",
-      "instances": [
-       {
-        "s_id": "current",
-        "annotations": {
-         "type": "composed"
-        }
-       }
+      "s_identities": [
+       "current"
       ],
       "fields": [
        {
@@ -153,7 +134,7 @@
         "unit": "bytes",
         "annotations": {
          "method": "freemem",
-         "module": "os"
+         "submodule": "os"
         }
        },
        {
@@ -169,11 +150,32 @@
         "unit": "seconds",
         "annotations": {
          "method": "uptime",
-         "module": "os"
+         "submodule": "os"
         }
        }
       ],
-      "actions": []
+      "actions": [
+       {
+        "name": "set_special_mode",
+        "argument": {
+         "type": "enum",
+         "range": [
+          "human_sleeping",
+          "offical_working",
+          "home_standby"
+         ]
+        },
+        "unit": "",
+        "annotations": {
+         "parameters": {
+          "human_sleeping": {
+           "target_temperature": 26,
+           "operation_mode": "auto"
+          }
+         }
+        }
+       }
+      ]
      }
     ]
    }

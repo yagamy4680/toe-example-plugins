@@ -2,16 +2,36 @@
 /** --------------------------------------- */
 class SchemaBaseClass
   ->
-    @annotations = {}
-    @sensors = {}
-    @actuators = {}
+    @sensor_identities = {}
+    @sensor_actuator_actions = {}
+    @annotation_stores = {}
 
-  declare-sensors: (types-and-identities) ->
-    self = @
-    for st, identities of types-and-identities
-      self.sensors[st] = {}
-      for id in identities
-        self.sensors[st][id] = {}
+  ##
+  # `s_type`, the sensor type
+  # `identities`, the list of possible s_id for the specific sensor type
+  #
+  declareSensorIdentities: (s_type, identities) ->
+    @sensor_identities[s_type] = identities
+    return @
+
+  ##
+  # `s_type`, the sensor type
+  # `actions`, the list of actuator actions for the specific sensor type,
+  #             that cannot be a simple writeable sensor field.
+  #
+  declareSensorActuatorActions: (s_type, actions) ->
+    @sensor_actuator_actions[s_type] = actions
+    return @
+
+  ##
+  # `p`, the data-path for annotations in the store; `null` means the annotations for the peripheral-type.
+  # `a`, the annotations.
+  #
+  declareAnnotations: (p, annotations) ->
+    p = '/' unless p?
+    p = "/#{p}" unless p.startsWith '/'
+    @annotation_stores[p] = annotations
+    return @
 
 
 SchemaBaseClass = SCHEMA_BASE_CLASS if SCHEMA_BASE_CLASS?
@@ -37,39 +57,38 @@ class NodejsProcess extends SchemaBaseClass
   os:
     * field: \freeMemory, unit: \bytes  , value: [\int, [0, 4294967296]], $submodule: 'os', $method: 'freemem' # annotations for `nodejs_process/os/*/freeMemory`
     * field: \uptime    , unit: \seconds, value: [\int, [0, 4294967296]], $submodule: 'os', $method: 'uptime'  # annotations for `nodejs_process/os/*/uptime`
-
+  
   ->
     super!
-    ##
-    # Declare the number of sensors and their count and types.
-    #
-    @.declare-sensors do
-      cpu   : <[0]>
-      memory: <[0]>
-      os    : <[current]>
+    @
+      ##
+      # Declare the instances (with unique identities) of each sensor type
+      #
+      .declareSensorIdentities \cpu     , <[0]>
+      .declareSensorIdentities \memory  , <[0]>
+      .declareSensorIdentities \os      , <[current]>
+      
+      .declareSensorActuatorActions \os , do
+        * action: \set_special_mode   , argument: [\enum, <[human_sleeping offical_working home_standby]>]
+          $parameters:
+            human_sleeping: {target_temperature: 26.0, operation_mode: \auto}
+          ...
     
-    @annotations =
-      node-modules: <[os cpu memory]>
+      .declareAnnotations null, modules: <[os cpu memory]>
 
-    #
-    # Set annotation for the entire peripheral-type: NodejsProcess
-    #
-    @.set-annotations null, {node-modules: <[os cpu memory]>}
+      .declareAnnotations 'os', type: \composed
 
-    #
-    # Set annotations for all sensor instances with same sensor-type: `os`
-    #
-    @.set-annotations 'os', {type: 'composed'}
+      .declareAnnotations 'memory', do
+        type: \single
+        submodule: \process
+        method: \memoryUsage
 
-    #
-    # Set annotations for all sensor instances with same sensor-type: `cpu`
-    #
-    @.set-annotations 'cpu', {type: 'single', submodule: 'process', method: 'cpuUsage'}
+      .declareAnnotations 'cpu', do
+        type: \single
+        submodule: \process
+        method: \cpuUsage
 
-    #
-    # Set annotations for all sensor instances with same sensor-type: `memory`
-    #
-    @.set-annotations 'memory' , {type: 'single', submodule: 'process', method: 'memoryUsage'}
+    console.log "annotation_stores => #{JSON.stringify @annotation_stores, null, ' '}"
 
 
 ##
@@ -85,6 +104,8 @@ class NodejsProcess extends SchemaBaseClass
 roots = {
   NodejsProcess
 }
+
+n = new NodejsProcess {}
 
 /** Please Don't Modify These Lines Below   */
 /** --------------------------------------- */
