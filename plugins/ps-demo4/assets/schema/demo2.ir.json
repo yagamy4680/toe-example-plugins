@@ -1,0 +1,157 @@
+{
+ "manifest": {
+  "format": 2,
+  "name": "demo2",
+  "version": "0.0.1",
+  "created_at": "2019-07-26T20:24:04.600Z",
+  "checksum": "9fd30a4adbef9680eece4baeea96c14d3a26e2cc0b753765955963510b684353"
+ },
+ "content": {
+  "peripheral_types": [
+   {
+    "p_type": "schema_base_class",
+    "p_type_parent": null,
+    "class_name": "SchemaBaseClass",
+    "sensor_types": []
+   },
+   {
+    "p_type": "nodejs_process",
+    "p_type_parent": "schema_base_class",
+    "class_name": "NodejsProcess",
+    "sensor_types": [
+     {
+      "s_type": "cpu",
+      "s_identities": [
+       "0"
+      ],
+      "fields": [
+       {
+        "name": "user",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
+       },
+       {
+        "name": "system",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
+       }
+      ],
+      "actions": []
+     },
+     {
+      "s_type": "memory",
+      "s_identities": [
+       "0"
+      ],
+      "fields": [
+       {
+        "name": "rss",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
+       },
+       {
+        "name": "heapTotal",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
+       },
+       {
+        "name": "heapUsed",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
+       },
+       {
+        "name": "external",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
+       }
+      ],
+      "actions": []
+     },
+     {
+      "s_type": "os",
+      "s_identities": [
+       "current"
+      ],
+      "fields": [
+       {
+        "name": "freeMemory",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "bytes",
+        "annotations": {}
+       },
+       {
+        "name": "uptime",
+        "writeable": false,
+        "value": {
+         "type": "int",
+         "range": [
+          0,
+          4294967296
+         ]
+        },
+        "unit": "seconds",
+        "annotations": {}
+       }
+      ],
+      "actions": []
+     }
+    ]
+   }
+  ]
+ }
+}
