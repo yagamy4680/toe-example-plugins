@@ -1,140 +1,191 @@
-## demo2
+## demo4
 
-The plugin demonstrates how to implement [PeripheralService](../../docs/peripheral-service.ls) with regular sensor data updates with CPU usage of current nodejs process, based on the 2nd version of schema format. Here are implemented features:
+The plugin is derived from [ps-demo2](../ps-demo2), but running sensor data measurement logics in separate process with tcp daemon. The plugin utilizes SensorWeb's `pipe` feature (as tcp client) to connect to the sensor process via tcp connection.
 
-- notify SensorWeb3 a sensor update event every 2 seconds, with `cpuUsage` data, under these tags
-  - peripheral-type: `nodejs_processs`
-  - peripheral-id: `process.pid`
-  - sensor-type: `cpu`
-  - sensor-id: `0`
-- cpu usage data contains these fields
-  - `user`
-  - `system`
-- notify SensorWeb3 about the peripheral managing state.
+`Pipe` in SensorWeb is the tcp connection to remote/local TCP server, that supports bi-direction data transmission. Comparing to the standard tcp connection, `Pipe` in SensorWeb offers these additional functionalities:
 
-Here are sample data when the plugin is running inside SensorWeb3:
+- support both **byline** and **raw** packet reading
+- support auto-reconnect
+- support data monitoring for bi-direction transmission
+
+
+
+### Tcp Daemon for Sensor Data
+
+The source codes of tcp daemon are located [daemon](./daemon), and its entry point is `daemon/procd.js`:
 
 ```text
-$ telnet localhost 6021
+$  find daemon
+daemon
+daemon/monitors
+daemon/monitors/cpu.js
+daemon/monitors/os.js
+daemon/monitors/memory.js
+daemon/monitors/base.js
+daemon/procd.js
+```
+
+To startup Tcp daemon process, just ask nodejs to run `procd.js`, that listens port number 9000:
+
+```text
+$ node daemon/procd.js
+server is listening 9000 ...
+```
+
+Then, you can simply telnet to port 9000 to receive sensor data updates:
+
+```text
+$  telnet localhost 9000
 Trying ::1...
 Connected to localhost.
 Escape character is '^]'.
-2019-07-26T20:14:11.691Z	ps-sensor-updated	boot1://204951880ms	nodejs_process/6/cpu/0	user=90000	system=40000
-2019-07-26T20:14:13.688Z	ps-sensor-updated	boot1://204953875ms	nodejs_process/6/memory/0	rss=48713728	heapTotal=24735744	heapUsed=20154328	external=25008
-2019-07-26T20:14:13.689Z	ps-sensor-updated	boot1://204953878ms	nodejs_process/6/os/current	freeMemory=190070784	uptime=204953
-2019-07-26T20:14:13.692Z	ps-sensor-updated	boot1://204953881ms	nodejs_process/6/cpu/0	user=120000	system=120000
-2019-07-26T20:14:15.700Z	ps-sensor-updated	boot1://204955889ms	nodejs_process/6/cpu/0	user=120000	system=120000
+# hello-world
+0	1564484673651	sensor-updated	cpu	0	{"user":4964,"system":583}
+1	1564484674638	sensor-updated	memory	0	{"rss":21962752,"heapTotal":7684096,"heapUsed":5161256,"external":8240}
+2	1564484674657	sensor-updated	cpu	0	{"user":5895,"system":1110}
+3	1564484675660	sensor-updated	cpu	0	{"user":6226,"system":1195}
 ^]
 telnet> quit
 Connection closed.
 ```
 
+The protocol for this tcp daemon is line-separated CSV+JSON. 
+
+- All packets are text-based, that means only ASCII 0x30 ~ 0x7F characters are allowed in packet content.
+- `\r\n` is used to separate packets.
+- There are 2 types of packets: COMMENT and DATA
+- **COMMENT** packet starts with `#` character. Entire packet content except 1st character is the verbose message from Tcp daemon
+- **DATA** packet contains 5 fields, and `\t` is used to separate fields.
+  1. `id`, the auto-incremental identity
+  2. `epoch`, the timestamp when the packet is sent out
+  3. `evt`, the event of this packet to carry
+  4. `token1`, the 1st token for this event
+  5. `token2`, the 2nd token for this event
+  6. `payload`, the payload of this event, in JSON format (single line)
+  
+```text
+id \t epoch \t evt \t token1 \t token2 \t payload \r\n
+id \t epoch \t evt \t token1 \t token2 \t payload \r\n
+```
+
+So, when the `evt` is `sensor-update`, it indicates a packet for sensor update event with sensor data measurements in its `payload`.
+
+
 
 ### Compile Schema
 
-The v2 schema is still based on [Livescript](http://livescript.net/), and here is the schema [demo2.ls](./assets/schema/demo2.ls):
+Same as [ps-demo2](../ps-demo2).
 
-```livescript
-class NodejsProcess extends SchemaBaseClass
-  cpu:
-    * field: \user      , unit: \bytes  , value: [\int, [0, 4294967296]]
-    * field: \system    , unit: \bytes  , value: [\int, [0, 4294967296]]
 
-  memory:
-    * field: \rss       , unit: \bytes  , value: [\int, [0, 4294967296]]
-    * field: \heapTotal , unit: \bytes  , value: [\int, [0, 4294967296]]
-    * field: \heapUsed  , unit: \bytes  , value: [\int, [0, 4294967296]]
-    * field: \external  , unit: \bytes  , value: [\int, [0, 4294967296]]
+### Plugin with Pipe
 
-  os:
-    * field: \freeMemory, unit: \bytes  , value: [\int, [0, 4294967296]]
-    * field: \uptime    , unit: \seconds, value: [\int, [0, 4294967296]]
+In the constructor of peripheral service, the `mode` needs to configure as `MODE_PIPE`, and specify the pipe information in the field `mode_settings`:
 
-  ->
-    super!
-    @
-      ##
-      # Declare the instances (with unique identities) of each sensor type
-      #
-      .declareSensorIdentities \cpu     , <[0]>
-      .declareSensorIdentities \memory  , <[0]>
-      .declareSensorIdentities \os      , <[current]>
+```javascript
+constructor(opts, uptime, pmodule) {
+    super(opts, uptime, pmodule, require('./schema.json'));
+    this.pid = process.pid.toString();
+    this.mode = MODE_PIPE;
+    this.mode_settings = {
+        pipes: [
+            { name: 'aaa', byline: true }
+        ]
+    };
+}
 ```
 
-To compile schema (parse Livescript to produce schema IR file in JSON format), you need to download https://github.com/t2t-io/tic-data-toolkit. Here are setup instructions:
-
-```bash
-$ cd /opt
-$ git clone https://github.com/t2t-io/tic-data-toolkit.git
-$ cd /opt/tic-data-toolkit
-$ npm install
-```
-
-Here is example to compile schema:
+In this plugin, it's assumed that the PIPE `aaa` is connecting to remote tcp daemon that measures cpu and memory sensor data regularly, and the communication protocol is `line` based. The bash script [run-sensorweb-with-extra-tcp](./run-sensorweb-with-extra-tcp) can help configure SensorWeb for the additional PIPE required by this plugin. The bash script has 3 arguments:
 
 ```text
-$ /opt/tic-data-toolkit/bin/cli.ls schema2ir /tmp/toe-example-plugins/plugins/ps-demo2/assets/schema/demo2.ls
-2019/07/27 04:24:04 tic-data-toolkit::schema2ir  [INFO] output => /tmp/toe-example-plugins/plugins/ps-demo2/assets/schema
-2019/07/27 04:24:04 tic-data-toolkit::schema2ir  [INFO] file => /tmp/toe-example-plugins/plugins/ps-demo2/assets/schema/demo2.ls
-2019/07/27 04:24:04 tic-data-toolkit::schema-parser [INFO] these variables shall be ignored: MANIFEST
-2019/07/27 04:24:04 tic-data-toolkit::schema-parser [INFO] load classes in order: NodejsProcess
-2019/07/27 04:24:04 tic-data-toolkit::schema-parser [INFO] nodejs_process/_/cpu/[0] => fields: [{"field":"user","unit":"bytes","value":["int",[0,4294967296]]},{"field":"system","unit":"bytes","value":["int",[0,4294967296]]}]
-2019/07/27 04:24:04 tic-data-toolkit::schema-parser [INFO] nodejs_process/_/memory/[0] => fields: [{"field":"rss","unit":"bytes","value":["int",[0,4294967296]]},{"field":"heapTotal","unit":"bytes","value":["int",[0,4294967296]]},{"field":"heapUsed","unit":"bytes","value":["int",[0,4294967296]]},{"field":"external","unit":"bytes","value":["int",[0,4294967296]]}]
-2019/07/27 04:24:04 tic-data-toolkit::schema-parser [INFO] nodejs_process/_/os/[current] => fields: [{"field":"freeMemory","unit":"bytes","value":["int",[0,4294967296]]},{"field":"uptime","unit":"seconds","value":["int",[0,4294967296]]}]
-2019/07/27 04:24:04 tic-data-toolkit::schema2ir  [INFO] writing /tmp/toe-example-plugins/plugins/ps-demo2/assets/schema/demo2.js with 3522 bytes
-2019/07/27 04:24:04 tic-data-toolkit::schema2ir  [INFO] writing /tmp/toe-example-plugins/plugins/ps-demo2/assets/schema/demo2.js.colored with 10404 bytes
-2019/07/27 04:24:04 tic-data-toolkit::schema2ir  [INFO] writing /tmp/toe-example-plugins/plugins/ps-demo2/assets/schema/demo2.ir.json with 2871 bytes
-2019/07/27 04:24:04 tic-data-toolkit::schema2ir  [INFO] writing /tmp/toe-example-plugins/plugins/ps-demo2/assets/schema/demo2.ir.yaml with 2351 bytes
-2019/07/27 04:24:04 tic-data-toolkit::schema2ir  [INFO] done.
+run-sensorweb-with-extra-tcp  [PIPE NAME]  [REMOTE SERVER ADDRESS]  [REMOTE SERVER PORT]
 ```
 
-The compiled schema can be found here: [demo2.ir.json](./assets/schema/demo2.ir.json).
+So, running SensorWeb with following command can configure SensorWeb to start a PIPE named `aaa` to remote tcp server at `192.168.1.100:8080`:
+
+```bash
+$ ./run-sensorweb-with-extra-tcp aaa 192.168.1.100 8080
+```
+
+After the pipe is established, the callback function `atPipeEstablished` of peripheral service is called:
+
+```javascript
+/**
+ * Indicates the PIPE with TcpProxy bridge is established. After this callback,
+ * the implementation of PeripheralService might receive data from PIPE, or
+ * can send data to PIPE.
+ * 
+ * @param {*} name                  the name of tcp-proxy's bridge
+ * @param {*} metadata              the meta information for the bridge
+ */
+atPipeEstablished(name, metadata) {
+    INFO(`${name}: pipe established => ${JSON.stringify(metadata)}`);
+    this.emitPeripheralState(this.types[0], this.pid, RELATIONSHIP_MANAGED, metadata);
+}
+```
+
+Then, when SensorWeb receives tcp packet from remote tcp server, the callback function `atPipeData` of peripheral service is called:
+
+```javascript
+/**
+ * Process the data from pipe, either LINE or BUFFER.
+ * 
+ * @param {string} name             the name of tcp-proxy's bridge, whose communicator's connection
+ *                                  receives these data, and forward to PeripheralService to
+ *                                  process. E.g. `sb0`, `bm0`...
+ * 
+ * @param {string or buffer} data   the data to be sent to communicator's connection. Might be string or 
+ *                                  buffer object.
+ * 
+ * @param {boolean} byline          `false` indicates the `data` parameter is an Buffer object with binary data,
+ *                                  `true` indicates the `data` parameter is a String with text data.
+ */
+atPipeData(name, data, byline = yes) {
+    var tokens = data.split('\t');
+    var [id, timestamp, evt, token1, token2, payload] = tokens
+    if (evt != 'sensor-updated') {
+        return;
+    }
+    timestamp = new Date(parseInt(timestamp));
+    INFO(`${name} <- ${id.blue} ${timestamp.toISOString()} ${evt.yellow} ${token1.cyan} ${token2.green} ${payload.red}`);
+    payload = JSON.parse(payload);
+    this.emitData(this.types[0], this.pid, token1, token2, payload);
+}
+```
+
 
 
 ### Build Javascript Bundle
 
-The plugin is written in ES6, and the build script of npm can compile all ES6 scripts to ES5 and bundle all of them together to produce single javascript file:
+Same as [ps-demo2](../ps-demo2).
+
+
+
+### Run SensorWeb on Docker
+
+Then, let's simply start SensorWeb to connect to the local tcp daemon to receive sensor data updates:
 
 ```text
-$  ls -al ./lib
-total 88
-drwxr-xr-x   7 yagamy  staff    224 Jul 27 01:37 .
-drwxr-xr-x  15 yagamy  staff    480 Jul 27 04:16 ..
--rw-r--r--   1 yagamy  staff  15262 Jul 27 01:37 bundle.js
--rw-r--r--   1 yagamy  staff   5125 Jul 27 01:37 bundle.min.js
--rw-r--r--   1 yagamy  staff  14135 Jul 27 01:37 bundle.pretty.js
--rw-r--r--   1 yagamy  staff    198 Jul 27 01:37 index.js
-lrwxr-xr-x   1 yagamy  staff     30 Oct 12  2018 schema.json -> ../assets/schema/demo2.ir.json
+$ ES6=true YAPPS_DUMP_LOADED_CONFIG=true ./run-sensorweb-with-extra-tcp aaa host.docker.internal 9000
 ```
 
-The bundled (and minified) javascript is located at `ps-demo2/lib/bundle.min.js`. The bundled javascript is loaded by `lib/index.js`:
+Please note, 
 
-```javascript
-$  cat lib/index.js
-var Service = require('./bundle.min');
-class WrapperService extends Service {
-    constructor(opts, uptime) {
-        super(opts, uptime, module);
-    }
-};
-module.exports = exports = WrapperService;
-```
+- `ES6=true` indicates SensorWeb to load plugin from `src/index.js` (instead of `lib/index.js`)
+- `YAPPS_DUMP_LOADED_CONFIG` asks SensorWeb to dump entire config (including pipe configurations) before loading plugins
+- `host.docker.internal` is a special domain name pointing to your host computer that runs SensorWeb docker instance. Refer to official [Docker documentation](https://docs.docker.com/docker-for-mac/networking/) for details.
 
-To perform build script, please run `npm run build`:
-
-
-### Run SensorWeb3 on Docker
-
-Just simply type `./run-sensorweb3-standalone`, that shall startup a SensorWeb3 instance in Docker environment, and ask it to load this plugin for execution. Please note, by default, the entry point of this plugin is `lib/index.js` that means you always need to build javascript bundle before running SensorWeb3.
-
-If you want to run SensorWeb3 to directly load javascript source (ES6 at `src/index.js`), please run `ES6=true ./run-sensorweb3-standalone`:
+Here are startup logs:
 
 ```text
-$  ES6=true ./run-sensorweb3-standalone
-SCRIPT_CURRENT_NAME = run-sensorweb3-standalone
-SCRIPT_BASE_NAME = run-sensorweb3
-SCRIPT_SUBCOMMAND = standalone
-FUNC = run_standalone
+$  ES6=true YAPPS_DUMP_LOADED_CONFIG=true ./run-sensorweb-with-extra-tcp aaa host.docker.internal 9000
+SCRIPT_CURRENT_NAME = run-sensorweb-with-extra-tcp
+SCRIPT_BASE_NAME = run-sensorweb
+SCRIPT_SUBCOMMAND = with-extra-tcp
+FUNC = run_with_extra_tcp
+-o ^communicator.connections.aaa:ewogICJlbmFibGVkIjogdHJ1ZSwKICAidXJsIjogInRjcDovL2hvc3QuZG9ja2VyLmludGVybmFsOjkwMDAiLAogICJjaGFubmVsIjogbnVsbCwKICAiYnJvYWRjYXN0IjogZmFsc2UKfQo=
+-o ^sock.servers.aaa:ewogICJ1cmkiOiAidGNwOi8vMC4wLjAuMDoxMDAwMCIsCiAgImxpbmUiOiB0cnVlCn0K
+-o ^tcp-proxy.bridges.aaa:ewogICJtZXRhZGF0YSI6IHsKICAgICJndWVzcyI6IGZhbHNlLAogICAgImRlZmF1bHRzIjogewogICAgICAiZGV2aWNlIjogInJlbW90ZSIsCiAgICAgICJhcHAiOiAiYWFhIgogICAgfQogIH0KfQo=
+
 launch script:
 
 #!/bin/bash
@@ -143,213 +194,93 @@ docker run \
 	-it \
 	--init \
 	--rm \
-	--name sensor-web3-test-0727-043001 \
+	--name sensor-web-test-0730-194950 \
 	-p 6020:6020 -p 6021:6021 -p 6022:6022 -p 6023:6023 -p 6024:6024  \
 	 \
-	-v /Users/yagamy/Works/workspaces/t2t/yapps-tt/externals/third_parties/toe-example-plugins/plugins/ps-demo2:/opt/plugins/ps-demo2 \
+	-v /Users/yagamy/Works/workspaces/t2t/yapps-tt/externals/third_parties/toe-example-plugins/plugins/ps-demo4:/opt/plugins/ps-demo4 \
 	 \
-	-e YAPPS_DUMP_LOADED_CONFIG=false \
-	-e YAPPS_EXTRA_PERIPHERAL_SERVICES=/opt/plugins/ps-demo2/src \
+	-e YAPPS_DUMP_LOADED_CONFIG=true \
+	-e YAPPS_EXTRA_PERIPHERAL_SERVICES=/opt/plugins/ps-demo4/src \
 	 \
 	 \
-	tictactoe/yapps.sensor-web3:3.9.7 \
+	tictactoe/yapps.sensor-web:4.0.0 \
 		node \
 			--expose-gc \
 			index.js \
 				 \
-				-b ps-manager.handlers.console.enabled=true
+				-b ps-manager.handlers.console.enabled=true -o ^communicator.connections.aaa:ewogICJlbmFibGVkIjogdHJ1ZSwKICAidXJsIjogInRjcDovL2hvc3QuZG9ja2VyLmludGVybmFsOjkwMDAiLAogICJjaGFubmVsIjogbnVsbCwKICAiYnJvYWRjYXN0IjogZmFsc2UKfQo= -o ^sock.servers.aaa:ewogICJ1cmkiOiAidGNwOi8vMC4wLjAuMDoxMDAwMCIsCiAgImxpbmUiOiB0cnVlCn0K -o ^tcp-proxy.bridges.aaa:ewogICJtZXRhZGF0YSI6IHsKICAgICJndWVzcyI6IGZhbHNlLAogICAgImRlZmF1bHRzIjogewogICAgICAiZGV2aWNlIjogInJlbW90ZSIsCiAgICAgICJhcHAiOiAiYWFhIgogICAgfQogIH0KfQo=
 
-[yapps-loader] => begin => 1564173002842 (2019-07-26T20:30:02.842Z)
-[yapps] arguments: ["/usr/local/bin/node","/yapps/index.js","-b","ps-manager.handlers.console.enabled=true"]
-[yapps] environment variables:
-	YAPPS_DUMP_LOADED_CONFIG: false
-	YAPPS_EXTRA_PERIPHERAL_SERVICES: /opt/plugins/ps-demo2/src
+...
 
-[yapps] argv => {"_":[],"h":false,"v":false,"verbose":false,"q":false,"quiet":false,"b":"ps-manager.handlers.console.enabled=true","config_bool":["ps-manager.handlers.console.enabled=true","ps-manager.handlers.console.enabled=true"],"c":"default","config":["default","default"],"p":null,"pidfile":[null,null],"u":null,"unixsock":[null,null],"d":false,"deployment":false,"$0":"/usr/local/bin/node ./index.js"}
-[logger] y-module-dir = /Users/yagamy/Works/workspaces/t2t/yapps-tt/externals/y_modules
-07/26 20:30:03 yapps::system-uptime         [INFO] retrieve 205904360ms from /proc/uptime
-07/26 20:30:03 yapps::inner                 [INFO] application name: yapps
-07/26 20:30:03 yapps::WebApp                [INFO] web-app initiates
-module._extensions[.js]
-module._extensions[.json]
-module._extensions[.node]
-module._extensions[.ls]
-07/26 20:30:03 yapps::BaseApp               [INFO] applying ps-manager.handlers.console.enabled = true
-07/26 20:30:03 yapps::BaseApp               [INFO] applied ps-manager.handlers.console.enabled = true
-07/26 20:30:03 yapps::BaseApp               [INFO] writing /tmp/yapps/yapps.pid with 6
-07/26 20:30:03 yapps::BaseApp               [INFO] writing /tmp/yapps/yapps.pid.ppid with 1
-07/26 20:30:03 yapps::web                   [INFO] user's configs: {"appName":"yapps","appPackageJson":{"author":{"name":["t2t inc."],"email":"yagamy@t2t.io"},"description":"N/A","name":"sensor-web3","version":"3.9.7","engines":{"node":"8.11.1"},"dependencies":{"livescript":"1.4.0","socket.io":"2.0.4","source-map-support":"0.3.2","systeminformation":"4.14.4"},"yapp":{"encloses":{"colors":"1.1.2","async":"1.4.2","eventemitter2":"0.4.14","moment":"2.10.6","optimist":"0.6.1","uid":"0.0.2","uuid":"3.2.1","utf8":"2.1.2","prettyjson":"1.1.3","semver":"5.5.0","js-yaml":"3.11.0","body-parser":"1.14.1","express":"4.13.3","handlebars":"4.0.3","byline":"4.2.1","through":"2.3.8"}}},"appCtrlSock":"unix:///tmp/yapps/yapps.sock","host":"0.0.0.0","port":6020,"api":3,"auth":false,"headless":true,"express_partial_response":false,"express_method_overrid":false,"express_multer":false}
-07/26 20:30:03 yapps::web                   [INFO] default configs: {"port":6010,"host":"0.0.0.0","auth":true,"headless":true,"cors":false,"view_verbose":false,"api":1,"upload_path":"/yapps/work/web/upload","express_partial_response":true,"express_method_overrid":true,"express_multer":true,"ws":{}}
-07/26 20:30:03 yapps::web                   [INFO] merged configs: {"port":6020,"host":"0.0.0.0","auth":false,"headless":true,"cors":false,"view_verbose":false,"api":3,"upload_path":"/yapps/work/web/upload","express_partial_response":false,"express_method_overrid":false,"express_multer":false,"ws":{},"appName":"yapps","appPackageJson":{"author":{"name":["t2t inc."],"email":"yagamy@t2t.io"},"description":"N/A","name":"sensor-web3","version":"3.9.7","engines":{"node":"8.11.1"},"dependencies":{"livescript":"1.4.0","socket.io":"2.0.4","source-map-support":"0.3.2","systeminformation":"4.14.4"},"yapp":{"encloses":{"colors":"1.1.2","async":"1.4.2","eventemitter2":"0.4.14","moment":"2.10.6","optimist":"0.6.1","uid":"0.0.2","uuid":"3.2.1","utf8":"2.1.2","prettyjson":"1.1.3","semver":"5.5.0","js-yaml":"3.11.0","body-parser":"1.14.1","express":"4.13.3","handlebars":"4.0.3","byline":"4.2.1","through":"2.3.8"}}},"appCtrlSock":"unix:///tmp/yapps/yapps.sock"}
-07/26 20:30:03 system-info                  [INFO] ttt => profile:misc, profile_version:19700101z
-07/26 20:30:03 system-info                  [INFO] context => ttt:{"profile":"misc","profile_version":"19700101z"}
-07/26 20:30:03 ps-manager                   [INFO] opts => {"appName":"yapps","appPackageJson":{"author":{"name":["t2t inc."],"email":"yagamy@t2t.io"},"description":"N/A","name":"sensor-web3","version":"3.9.7","engines":{"node":"8.11.1"},"dependencies":{"livescript":"1.4.0","socket.io":"2.0.4","source-map-support":"0.3.2","systeminformation":"4.14.4"},"yapp":{"encloses":{"colors":"1.1.2","async":"1.4.2","eventemitter2":"0.4.14","moment":"2.10.6","optimist":"0.6.1","uid":"0.0.2","uuid":"3.2.1","utf8":"2.1.2","prettyjson":"1.1.3","semver":"5.5.0","js-yaml":"3.11.0","body-parser":"1.14.1","express":"4.13.3","handlebars":"4.0.3","byline":"4.2.1","through":"2.3.8"}}},"appCtrlSock":"unix:///tmp/yapps/yapps.sock","verbose":true,"policy":{"bad_sensor_data":"reject","schema_strict_sensor_type":false,"schema_strict_sensor_id":false},"handlers":{"console":{"enabled":true,"excluded_p_types":["mainboard","sensorboard"]},"debug":{"enabled":true,"server_name":"ps"},"storage":{"enabled":true,"sync_dir":"/yapps/tmp"},"sock":{"enabled":true,"sensor":{"server_name":"ps_s_data"},"peripheral":{"server_name":"ps_p_data"},"app":{"server_name":"ps_app_data","p_types":["linux"]}}}}
-07/26 20:30:03 yapps::system-uptime         [INFO] detect boots from /opt/ys/share/timestamp: 1 (fallback to '0' because of err: Error: ENOENT: no such file or directory, scandir '/opt/ys/share/timestamp')
-07/26 20:30:03 yapps::system-uptime         [INFO] boots: 1 times
-07/26 20:30:03 yapps::system-uptime         [INFO] system: 205904360ms
-07/26 20:30:03 yapps::system-uptime         [INFO] app: 325ms
-07/26 20:30:03 yapps::sock                  [INFO] sock[ps]: listening tcp://0.0.0.0:6021
-07/26 20:30:03 yapps::sock                  [INFO] sock[ps_s_data]: listening tcp://0.0.0.0:6022
-07/26 20:30:03 yapps::sock                  [INFO] sock[ps_p_data]: listening tcp://0.0.0.0:6023
-07/26 20:30:03 yapps::sock                  [INFO] sock[ps_app_data]: listening tcp://0.0.0.0:6024
-07/26 20:30:03 yapps::sock                  [INFO] sock[sb0]: listening tcp://0.0.0.0:10011
-07/26 20:30:03 yapps::sock                  [INFO] sock[bm0]: listening tcp://0.0.0.0:10014
-07/26 20:30:03 yapps::sock                  [INFO] sock[bm1]: listening tcp://0.0.0.0:10024
-07/26 20:30:03 yapps::sock                  [INFO] sock[stats]: listening tcp://0.0.0.0:10020
-07/26 20:30:03 yapps::sock                  [INFO] listening /tmp/yap/yapps.sb0.sock
-07/26 20:30:03 yapps::sock                  [INFO] listening /tmp/yap/yapps.bm0.sock
-07/26 20:30:03 system-helpers               [INFO] successfully initiate an instance of regular-gc
-07/26 20:30:03 system-helpers               [INFO] successfully initiate an instance of dump-info-service
-07/26 20:30:03 system-helpers::regular-gc   [INFO] period = 180
-07/26 20:30:03 system-info                  [WARN] Error: ENOENT: no such file or directory, open '/tmp/ttt_system'
-07/26 20:30:03 system-info                  [WARN] failed to read /tmp/ttt_system
-07/26 20:30:03 system-info                  [INFO] ttt.id is empty => false
-07/26 20:30:03 system-info                  [INFO] ttt.id is null => false
-07/26 20:30:03 system-info                  [INFO] ttt => {"profile":"misc","profile_version":"19700101z"}
-07/26 20:30:03 system-info                  [INFO] context: {"ttt":{"profile":"misc","profile_version":"19700101z"},"runtime":{"node_version":"v8.12.0","node_arch":"x64","node_platform":"linux"},"cwd":"/yapps","mac_address":"0242ac110002","iface":{"name":"eth0","iface":{"ipv4":"172.17.0.2","mac":"02:42:ac:11:00:02"}},"interfaces":[{"iface":"lo","ifaceName":"lo","ip4":"127.0.0.1","ip6":"","mac":"","internal":true,"virtual":false,"operstate":"unknown","type":"virtual","duplex":"","mtu":65536,"speed":-1,"carrierChanges":0},{"iface":"eth0","ifaceName":"eth0","ip4":"172.17.0.2","ip6":"","mac":"02:42:ac:11:00:02","internal":false,"virtual":false,"operstate":"up","type":"wired","duplex":"full","mtu":1500,"speed":10000,"carrierChanges":2}],"distro":{"name":"linux--","arch":"x86_64","uname":{"kernel":"linux","architecture":"x86_64","release":"4.9.125-linuxkit"},"dist":{"name":"","codename":""}},"system":{"manufacturer":"","model":"Docker Container","version":"1.0","serial":"None","uuid":"E66E4D4B-0000-0000-9015-3A859530BC31","sku":"-"},"cpu":{"manufacturer":"Intel®","brand":"Core™ i7-7920HQ","vendor":"","family":"","model":"","stepping":"","revision":"","voltage":"","speed":"3.10","speedmin":"","speedmax":"","cores":4,"physicalCores":0.25,"processors":4,"socket":"","cache":{"l1d":"","l1i":"","l2":"","l3":""}},"os":{"platform":"linux","distro":"Alpine Linux","release":"3.8.1","codename":"","kernel":"4.9.125-linuxkit","arch":"x64","hostname":"09e07f4559cf","codepage":"UTF-8","logofile":"alpine linux","serial":"09e07f4559cf","build":"","servicepack":""},"id":"09E07F4559CF_0242AC110002","instance_id":"09E07F4559CF_0242AC110002_6_16C2FF9E7F0"}
-07/26 20:30:03 communicator                 [INFO] connections[sb0]: settings => {"enabled":false,"url":"tcp://127.0.0.1:10011","channel":null,"broadcast":false}
-07/26 20:30:03 communicator                 [INFO] connections[sb0]: DISABLED!!
-07/26 20:30:03 communicator                 [INFO] connections[bm0]: settings => {"enabled":false,"url":"tcp://127.0.0.1:10014","channel":null,"broadcast":true}
-07/26 20:30:03 communicator                 [INFO] connections[bm0]: DISABLED!!
-07/26 20:30:03 communicator                 [INFO] connections[bm1]: settings => {"enabled":false,"url":"tcp://0.0.0.0:10014","channel":null,"broadcast":true}
-07/26 20:30:03 communicator                 [INFO] connections[bm1]: DISABLED!!
-07/26 20:30:03 communicator                 [INFO] connections[stats]: settings => {"enabled":false,"url":"exec:///yapps/assets/scripts/linux-stats/stats","channel":null,"broadcast":false,"peer":"stderr","args":["a","b","c","d"],"cwd":"/yapps","env":{"WAIT_TIME":10,"SYS_STATS_CPU_PERCENTAGE_SENSOR_PERIOD":10,"SYS_STATS_CPU_ALL_PERCENTAGES_SENSOR_PERIOD":10,"SYS_STATS_CPU_TIMES_SENSOR_PERIOD":10,"SYS_STATS_CPU_FREQ_SENSOR_PERIOD":5,"SYS_STATS_VIRTUAL_MEMORY_SENSOR_PERIOD":60,"SYS_STATS_SWAP_MEMORY_SENSOR_PERIOD":28800,"SYS_STATS_DISK_PARTITION_SENSOR_PERIOD":86400,"SYS_STATS_DISK_USAGE_SENSOR_PERIOD":300,"SYS_STATS_DISK_IO_SENSOR_PERIOD":300,"SYS_STATS_PROCESS_SENSOR_PERIOD":8,"SYS_STATS_PROCESS_SENSOR_EXTRA_KEYWORDS":"sandbox","SYS_STATS_PROCESS_SENSOR_DISABLED_FIELDS":"num_threads,num_fds","SYS_STATS_SYSTEM_UPTIME_SENSOR_PERIOD":120,"SYS_STATS_NETWORK_IO_SENSOR_PERIOD":60,"SYS_STATS_ADVANCED_NETWORK_IO_SENSOR_PERIOD":60,"SYS_STATS_WIRELESS_SENSOR_PERIOD":5,"SYS_STATS_CURL_HTTP_STAT_SENSOR_PERIOD":60,"SYS_STATS_CURL_HTTP_STAT_SENSOR_URL":"https://fc.t2t.io"}}
-07/26 20:30:03 communicator                 [INFO] connections[stats]: DISABLED!!
-07/26 20:30:03 tcp-proxy                    [WARN] bridge[sb0] DISABLED because of missing communicator
-07/26 20:30:03 tcp-proxy                    [WARN] bridge[bm0] DISABLED because of missing communicator
-07/26 20:30:03 tcp-proxy                    [WARN] bridge[bm1] DISABLED because of missing communicator
-07/26 20:30:03 tcp-proxy                    [WARN] bridge[stats] DISABLED because of missing communicator
-07/26 20:30:03 ps-manager                   [INFO] names => ["console","debug","storage","sock"]
-07/26 20:30:03 ps-evt-handlers::console     [INFO] enabled = true
-07/26 20:30:03 ps-evt-handlers::debug       [INFO] enabled = true
-07/26 20:30:03 ps-evt-handlers::debug       [INFO] server_name = ps
-07/26 20:30:03 ps-evt-handlers::storage     [INFO] enabled = true
-07/26 20:30:03 ps-evt-handlers::sock        [INFO] enabled = true
-07/26 20:30:03 ps-evt-handlers::sock        [INFO] s: ps_s_data, p: ps_p_data, app: ps_app_data:(linux)
-07/26 20:30:03 ps-manager                   [INFO] successfully initialized.
-07/26 20:30:03 ps-impls::linux-stats        [WARN] DISABLED!!!
-07/26 20:30:03 ps-impls::linux-wireless     [WARN] DISABLED!!!
-07/26 20:30:03 blemo::index                 [WARN] missing these pipes in tcp-proxy: bm0, bm1
-07/26 20:30:03 blemo::index                 [WARN] DISABLED!!!
-07/26 20:30:03 ps-extras                    [INFO] loading external peripheral-service: /opt/plugins/ps-demo2/src
-07/26 20:30:03 ps-demo2::index              [INFO] name => demo2
-07/26 20:30:03 ps-demo2::index              [INFO] types => ["nodejs_process"]
-07/26 20:30:03 ps-demo2::index              [INFO] schema =>
-{"manifest":{"format":2,"name":"demo2","version":"0.0.1","created_at":"2019-07-26T20:24:04.600Z","checksum":"9fd30a4adbef9680eece4baeea96c14d3a26e2cc0b753765955963510b684353"},"content":{"peripheral_types":[{"p_type":"schema_base_class","p_type_parent":null,"class_name":"SchemaBaseClass","sensor_types":[]},{"p_type":"nodejs_process","p_type_parent":"schema_base_class","class_name":"NodejsProcess","sensor_types":[{"s_type":"cpu","s_identities":["0"],"fields":[{"name":"user","writeable":false,"value":{"type":"int","range":[0,4294967296]},"unit":"bytes","annotations":{}},{"name":"system","writeable":false,"value":{"type":"int","range":[0,4294967296]},"unit":"bytes","annotations":{}}],"actions":[]},{"s_type":"memory","s_identities":["0"],"fields":[{"name":"rss","writeable":false,"value":{"type":"int","range":[0,4294967296]},"unit":"bytes","annotations":{}},{"name":"heapTotal","writeable":false,"value":{"type":"int","range":[0,4294967296]},"unit":"bytes","annotations":{}},{"name":"heapUsed","writeable":false,"value":{"type":"int","range":[0,4294967296]},"unit":"bytes","annotations":{}},{"name":"external","writeable":false,"value":{"type":"int","range":[0,4294967296]},"unit":"bytes","annotations":{}}],"actions":[]},{"s_type":"os","s_identities":["current"],"fields":[{"name":"freeMemory","writeable":false,"value":{"type":"int","range":[0,4294967296]},"unit":"bytes","annotations":{}},{"name":"uptime","writeable":false,"value":{"type":"int","range":[0,4294967296]},"unit":"seconds","annotations":{}}],"actions":[]}]}]}}
-07/26 20:30:03 ps-demo2::index              [INFO] add data listener for monitors[cpu]
-07/26 20:30:03 ps-demo2::index              [INFO] add data listener for monitors[memory]
-07/26 20:30:03 ps-demo2::index              [INFO] add data listener for monitors[os]
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] parser: __memory__, 2 peripheral types.
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading schema_base_class
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/cpu => 0
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/cpu/*/user => int, [0, 4294967296], unit:bytes,
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/cpu/*/system => int, [0, 4294967296], unit:bytes,
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/memory => 0
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/memory/*/rss => int, [0, 4294967296], unit:bytes,
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/memory/*/heapTotal => int, [0, 4294967296], unit:bytes,
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/memory/*/heapUsed => int, [0, 4294967296], unit:bytes,
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/memory/*/external => int, [0, 4294967296], unit:bytes,
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/os => current
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/os/*/freeMemory => int, [0, 4294967296], unit:bytes,
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] loading nodejs_process/os/*/uptime => int, [0, 4294967296], unit:seconds,
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] init schema_base_class
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] init nodejs_process
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] init nodejs_process/cpu
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] init nodejs_process/memory
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] init nodejs_process/os
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] tree schema_base_class
-07/26 20:30:03 helpers::schema-ir-parser    [INFO] tree     nodejs_process
-07/26 20:30:03 ps-manager                   [INFO] psw[demo2]: register callback for peripheral-service[data-updated] event
-07/26 20:30:03 ps-manager                   [INFO] psw[demo2]: register callback for peripheral-service[peripheral-updated] event
-07/26 20:30:03 ps-manager                   [WARN] psw[demo2]: missing module object reference to initiate rootdir
-07/26 20:30:03 ps-manager                   [INFO] psw[demo2]: register peripheral-type nodejs_process
-07/26 20:30:03 ps-manager                   [INFO] psw[demo2]: pipe starts
-07/26 20:30:03 ps-manager                   [INFO] psw[demo2]: self.ready = yes!!!
-07/26 20:30:03 ps-manager                   [INFO] psw[demo2]: service registration is successfully done.
-07/26 20:30:03 yapps::BaseApp               [INFO] yapps initialized.
-07/26 20:30:03 ps-demo2::index              [INFO] the peripheral service is registered ...
-07/26 20:30:03 ps-manager                   [INFO] [demo2] nodejs_process/6 => state: 2 =>
-	ppid:        1
-	versions:
-	    http_parser: 2.8.0
-	    node:        8.12.0
-	    v8:          6.2.414.66
-	    uv:          1.19.2
-	    zlib:        1.2.11
-	    ares:        1.10.1-DEV
-	    modules:     57
-	    nghttp2:     1.32.0
-	    napi:        3
-	    openssl:     1.0.2p
-	    icu:         60.1
-	    unicode:     10.0
-	    cldr:        32.0
-	    tz:          2017c
-	os_uptime:   205904
-	os_platform: linux
+07/30 11:49:52 ps-manager                   [INFO] psw[demo2]: at-bridge-cc-connected() => true
+07/30 11:49:52 ps-demo4::index              [INFO] aaa: pipe established => {"device":"remote","app":"aaa"}
+07/30 11:49:52 ps-manager                   [INFO] [demo2] nodejs_process/6 => state: 2 =>
+	device: remote
+	app:    aaa
 
-07/26 20:30:03 ps-evt-handlers::console     [INFO] [boot1://205904784ms] nodejs_process/6/cpu/0 => user=460000 system=200000
-07/26 20:30:03 ps-evt-handlers::console     [INFO] [boot1://205904788ms] nodejs_process/6/memory/0 => rss=57528320 heapTotal=40677376 heapUsed=27308848 external=51944
-07/26 20:30:03 ps-evt-handlers::console     [INFO] [boot1://205904789ms] nodejs_process/6/os/current => freeMemory=203583488 uptime=205904
-07/26 20:30:03 yapps::sock                  [INFO] listening /tmp/yapps/yapps.sock
-07/26 20:30:03 yapps::web                   [INFO] api: add /api/v3/t
-07/26 20:30:03 yapps::web                   [INFO] api: add /api/v3/psm
-07/26 20:30:03 yapps::web                   [INFO] api: add /api/v3/ps
-07/26 20:30:03 yapps::web                   [INFO] api: add /api/v3/p
-07/26 20:30:03 yapps::web                   [INFO] api: add /api/v3/a
-07/26 20:30:03 yapps::web                   [INFO] api: add /api/v3/d
-07/26 20:30:03 yapps::web                   [INFO] api: add /api/v3/s
-07/26 20:30:03 yapps::web                   [INFO] api: add /api/v3/system
-07/26 20:30:03 yapps::web                   [WARN] socketio-auth is empty-ized
-07/26 20:30:03 yapps::web                   [INFO] _opts[ws] = {"port":6020,"host":"0.0.0.0","auth":false,"headless":true,"cors":false,"view_verbose":false,"api":3,"upload_path":"/yapps/work/web/upload","express_partial_response":false,"express_method_overrid":false,"express_multer":false,"ws":{},"appName":"yapps","appPackageJson":{"author":{"name":["t2t inc."],"email":"yagamy@t2t.io"},"description":"N/A","name":"sensor-web3","version":"3.9.7","engines":{"node":"8.11.1"},"dependencies":{"livescript":"1.4.0","socket.io":"2.0.4","source-map-support":"0.3.2","systeminformation":"4.14.4"},"yapp":{"encloses":{"colors":"1.1.2","async":"1.4.2","eventemitter2":"0.4.14","moment":"2.10.6","optimist":"0.6.1","uid":"0.0.2","uuid":"3.2.1","utf8":"2.1.2","prettyjson":"1.1.3","semver":"5.5.0","js-yaml":"3.11.0","body-parser":"1.14.1","express":"4.13.3","handlebars":"4.0.3","byline":"4.2.1","through":"2.3.8"}}},"appCtrlSock":"unix:///tmp/yapps/yapps.sock"}
-07/26 20:30:03 yapps::web                   [INFO] configs = {}
-07/26 20:30:03 yapps::web                   [INFO] ws : add ws://0.0.0.0:6020/ps
-07/26 20:30:03 yapps::web                   [INFO] ws : add ws://0.0.0.0:6020/client
-07/26 20:30:03 yapps::web                   [INFO] listening 0.0.0.0:6020
-07/26 20:30:04 system-helpers::regular-gc   [INFO] run global.gc()
-07/26 20:30:05 ps-evt-handlers::console     [INFO] [boot1://205906791ms] nodejs_process/6/cpu/0 => user=80000 system=30000
-07/26 20:30:07 ps-evt-handlers::console     [INFO] [boot1://205908797ms] nodejs_process/6/cpu/0 => user=90000 system=30000
-07/26 20:30:08 ps-evt-handlers::console     [INFO] [boot1://205909793ms] nodejs_process/6/os/current => freeMemory=200089600 uptime=205909
-07/26 20:30:09 ps-evt-handlers::console     [INFO] [boot1://205910799ms] nodejs_process/6/cpu/0 => user=90000 system=30000
-07/26 20:30:11 ps-evt-handlers::console     [INFO] [boot1://205912806ms] nodejs_process/6/cpu/0 => user=90000 system=30000
-07/26 20:30:13 ps-evt-handlers::console     [INFO] [boot1://205914795ms] nodejs_process/6/memory/0 => rss=48365568 heapTotal=23687168 heapUsed=20078664 external=25008
-07/26 20:30:13 ps-evt-handlers::console     [INFO] [boot1://205914797ms] nodejs_process/6/os/current => freeMemory=214433792 uptime=205914
-07/26 20:30:13 ps-evt-handlers::console     [INFO] [boot1://205914808ms] nodejs_process/6/cpu/0 => user=150000 system=90000
-07/26 20:30:15 ps-evt-handlers::console     [INFO] [boot1://205916811ms] nodejs_process/6/cpu/0 => user=150000 system=90000
-07/26 20:30:17 ps-evt-handlers::console     [INFO] [boot1://205918814ms] nodejs_process/6/cpu/0 => user=150000 system=90000
-07/26 20:30:18 ps-evt-handlers::console     [INFO] [boot1://205919800ms] nodejs_process/6/os/current => freeMemory=214614016 uptime=205919
-07/26 20:30:19 ps-evt-handlers::console     [INFO] [boot1://205920816ms] nodejs_process/6/cpu/0 => user=150000 system=90000
+07/30 11:49:52 ps-demo4::index              [INFO] aaa <= # hello-world
+07/30 11:49:52 ps-demo4::index              [INFO] aaa <= 11	1564487392801	sensor-updated	cpu	0	{"user":368634,"system":98408}
+07/30 11:49:52 ps-demo4::index              [INFO] aaa <- 11 2019-07-30T11:49:52.801Z sensor-updated cpu 0 {"user":368634,"system":98408}
+07/30 11:49:52 ps-evt-handlers::console     [INFO] [boot1://491767594ms] nodejs_process/6/cpu/0 => user=368634 system=98408
+
+...
 ```
 
 
-### Data Validation
-
-SensorWeb3 supports data validation based on schema v2, but those validation policies are disabled by default since v3.9.7:
+And, you can use HTTPie to get sensor data snapshot:
 
 ```text
-\ps-manager :
-  verbose: yes
-  policy:
-    bad_sensor_data: \reject        # warn, reject, nothing
-    schema_strict_sensor_type: no
-    schema_strict_sensor_id: no
+$  http -v :6020/api/v3/d
+GET /api/v3/d HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Host: localhost:6020
+User-Agent: HTTPie/0.9.9
+
+
+
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 221
+Content-Type: application/json; charset=utf-8
+Date: Tue, 30 Jul 2019 11:50:55 GMT
+ETag: W/"dd-BEXBCF+bj4b/RxJexfZHIw"
+X-Powered-By: Express
+
+{
+    "code": 0,
+    "data": {
+        "nodejs_process": {
+            "7": {
+                "cpu": {
+                    "0": {
+                        "system": 101587,
+                        "user": 378913
+                    }
+                },
+                "memory": {
+                    "0": {
+                        "external": 8240,
+                        "heapTotal": 7684096,
+                        "heapUsed": 5870400,
+                        "rss": 23773184
+                    }
+                }
+            }
+        }
+    },
+    "error": null,
+    "message": null,
+    "url": "/api/v3/d"
+}
 ```
 
-To enable `schema_strict_sensor_type`, please run SensorWeb3 with cmdline arguments: `ES6=true ./run-sensorweb3-standalone -b 'ps-manager.policy.schema_strict_sensor_type=true'`. With strict sensor type, SensorWeb3 rejects sensor data events whose sensor types are not defined in schema. For example, following data emittions are rejected because schema only defines `os`, `cpu`, and `memory` sensor types:
-
-```javascript
-// this.emitData(p_type, p_id, s_type, s_id, measurements)
-this.emitData(this.types[0], this.pid, 'hello', '0', data);
-this.emitData(this.types[0], this.pid, 'world', '0', data);
-```
 
 
-To enable `schema_strict_sensor_id`, please run SensorWeb3 with cmdline arguments: `ES6=true ./run-sensorweb3-standalone -b 'ps-manager.policy. schema_strict_sensor_id=true'`. With strict sensor identities, SensorWeb3 rejects sensor data events whose sensor identities are not declared in schema. For example, following data emittions are rejected because schema only declares sensor identity `0` for `cpu` sensor type:
+## TODO
 
-```javascript
-// this.emitData(p_type, p_id, s_type, s_id, measurements)
-this.emitData(this.types[0], this.pid, 'cpu', '1', data);
-this.emitData(this.types[0], this.pid, 'cpu', '2', data);
-```
-
+1. Change schema name from `demo2` to `demo4`
+2. Add actuator action support to plugin and tcp-daemon
+3. Add `atPipeDisconnected` event
+4. Add peripheral object state update (using same process id as tcp-daemon)
