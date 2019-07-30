@@ -165,14 +165,19 @@ Same as [ps-demo2](../ps-demo2).
 Then, let's simply start SensorWeb to connect to the local tcp daemon to receive sensor data updates:
 
 ```text
-$ ES6=true YAPPS_DUMP_LOADED_CONFIG=true ./run-sensorweb-with-extra-tcp aaa host.docker.internal 9000
+$ ES6=true \
+  YAPPS_DUMP_LOADED_CONFIG=true \
+  ./run-sensorweb-with-extra-tcp \
+    aaa \
+    host.docker.internal \
+    9000
 ```
 
 Please note, 
 
 - `ES6=true` indicates SensorWeb to load plugin from `src/index.js` (instead of `lib/index.js`)
 - `YAPPS_DUMP_LOADED_CONFIG` asks SensorWeb to dump entire config (including pipe configurations) before loading plugins
-- `host.docker.internal` is a special domain name pointing to your host computer that runs SensorWeb docker instance. Refer to official [Docker documentation](https://docs.docker.com/docker-for-mac/networking/) for details.
+- `host.docker.internal` is a special domain name pointing to your host computer that runs SensorWeb docker instance. Refer to official [Docker documentation](https://docs.docker.com/docker-for-mac/networking/) for details. If the tcp daemon for sensor data is running in another computer, you can specify the ip address (e.g. 192.168.1.100) or domain name in 2nd commandline argument.
 
 Here are startup logs:
 
