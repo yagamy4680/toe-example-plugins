@@ -68,9 +68,16 @@ id \t epoch \t evt \t token1 \t token2 \t payload \r\n
 id \t epoch \t evt \t token1 \t token2 \t payload \r\n
 ```
 
-So, when the `evt` is `sensor-update`, it indicates a packet for sensor update event with sensor data measurements in its `payload`.
+Here are supported events in DATA packet:
 
-
+- `sensor-update`, indicates a DATA packet with sensor udpate event with measurement
+  - `token1` is the sensor type
+  - `token2` is the sensor id
+  - `payload` is the measured data for this sensor udpate event
+- `peripheral-updated`, indicates a DATA packet with peripheral object update event
+  - `token1` is the peripheral id, that we use `process.pid` as identity of peripheral object
+  - `token2` is the ppid.
+  - `payload` is the metadata for the peripheral object
 
 ### Compile Schema
 
@@ -289,4 +296,4 @@ X-Powered-By: Express
 - [x] Change schema name from `demo2` to `demo4`
 - [ ] Add actuator action support to plugin and tcp-daemon
 - [ ] Add `atPipeDisconnected` event
-- [ ] Add peripheral object state update (using same process id as tcp-daemon)
+- [x] Add peripheral object state update (using same process id as tcp-daemon)

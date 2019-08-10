@@ -43,7 +43,7 @@ class Service extends PeripheralService {
         // this.name = 'ps-demo4';
         // this.types = [PERIPHERAL_TYPE];
         //
-        this.pid = process.pid.toString();
+        this.pid = null;
         this.mode = MODE_PIPE;
         this.mode_settings = {
             pipes: [
@@ -89,7 +89,6 @@ class Service extends PeripheralService {
      */
     atPipeEstablished(name, metadata) {
         INFO(`${name}: pipe established => ${JSON.stringify(metadata)}`);
-        this.emitPeripheralState(this.types[0], this.pid, RELATIONSHIP_MANAGED, metadata);
     }
 
     /**
@@ -114,16 +113,41 @@ class Service extends PeripheralService {
             INFO(`${name} <= ${data.gray}`);
             return;
         }
-        INFO(`${name} <= ${data.gray}`)
+        var handler = null;
         var tokens = data.split('\t');
         var [id, timestamp, evt, token1, token2, payload] = tokens
-        if (evt != 'sensor-updated') {
+        timestamp = new Date(parseInt(timestamp));
+
+        if (evt == 'sensor-updated') {
+            handler = this.processPacket_sensor_updated;
+        }
+        else if (evt == 'peripheral-updated') {
+            handler = this.processPacket_peripheral_updated;
+        }
+
+        if (handler) {
+            INFO(`${name} <- ${id.blue} ${timestamp.toISOString()} ${evt.yellow} ${token1.cyan} ${token2.green} ${payload.red}`);
+            handler.apply(this, [token1, token2, payload]);
+        }
+        else {
+            INFO(`unknown event type: ${evt}`);
+            INFO(`${name} <= ${data.gray}`)
             return;
         }
-        timestamp = new Date(parseInt(timestamp));
-        INFO(`${name} <- ${id.blue} ${timestamp.toISOString()} ${evt.yellow} ${token1.cyan} ${token2.green} ${payload.red}`);
-        payload = JSON.parse(payload);
-        this.emitData(this.types[0], this.pid, token1, token2, payload);
+    }
+
+    processPacket_sensor_updated(s_type, s_id, payload) {
+        var measurement = JSON.parse(payload);
+        if (this.pid) {
+            this.emitData(this.types[0], this.pid, s_type, s_id, measurement);
+        }
+    }
+
+    processPacket_peripheral_updated(pid, ppid, payload) {
+        var metadata = JSON.parse(payload);
+        this.pid = pid;
+        this.ppid = ppid;
+        this.emitPeripheralState(this.types[0], this.pid, RELATIONSHIP_MANAGED, metadata);   
     }
 
     /**
