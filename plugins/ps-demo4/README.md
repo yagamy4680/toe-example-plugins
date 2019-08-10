@@ -82,13 +82,14 @@ Same as [ps-demo2](../ps-demo2).
 In the constructor of peripheral service, the `mode` needs to configure as `MODE_PIPE`, and specify the pipe information in the field `mode_settings`:
 
 ```javascript
+const PIPE_NAME = 'aaa';
 constructor(opts, uptime, pmodule) {
     super(opts, uptime, pmodule, require('./schema.json'));
     this.pid = process.pid.toString();
     this.mode = MODE_PIPE;
     this.mode_settings = {
         pipes: [
-            { name: 'aaa', byline: true }
+            { name: PIPE_NAME, byline: true }
         ]
     };
 }
@@ -285,7 +286,7 @@ X-Powered-By: Express
 
 ## TODO
 
-1. Change schema name from `demo2` to `demo4`
-2. Add actuator action support to plugin and tcp-daemon
-3. Add `atPipeDisconnected` event
-4. Add peripheral object state update (using same process id as tcp-daemon)
+- [x] Change schema name from `demo2` to `demo4`
+- [ ] Add actuator action support to plugin and tcp-daemon
+- [ ] Add `atPipeDisconnected` event
+- [ ] Add peripheral object state update (using same process id as tcp-daemon)

@@ -20,6 +20,11 @@ const { RELATIONSHIP_NONE, RELATIONSHIP_CONFIGURED, RELATIONSHIP_MANAGED } = Per
  */
 const { MODE_PIPE } = PeripheralService.modes;
 
+/**
+ * The name of pipe connection (tcp client) to remote Tcp daemon.
+ */
+const PIPE_NAME = 'aaa';
+
 
 class Service extends PeripheralService {
 
@@ -42,7 +47,7 @@ class Service extends PeripheralService {
         this.mode = MODE_PIPE;
         this.mode_settings = {
             pipes: [
-                { name: 'aaa', byline: true }
+                { name: PIPE_NAME, byline: true }
             ]
         };
         INFO(`name => ${this.name}`);
