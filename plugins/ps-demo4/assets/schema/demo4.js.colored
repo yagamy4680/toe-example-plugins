@@ -81,6 +81,11 @@
           [37mfield[39m[93m:[39m [92m'uptime'[39m[32m,[39m
           [37munit[39m[93m:[39m [92m'seconds'[39m[32m,[39m
           [37mvalue[39m[93m:[39m [33m[[39m[92m'int'[39m[32m,[39m [33m[[39m[34m0[39m[32m,[39m [34m4294967296[39m[33m][39m[33m][39m
+        [33m}[39m[32m,[39m [33m{[39m
+          [37mfield[39m[93m:[39m [92m'priority'[39m[32m,[39m
+          [37munit[39m[93m:[39m [92m''[39m[32m,[39m
+          [37mwriteable[39m[93m:[39m [91mtrue[39m[32m,[39m
+          [37mvalue[39m[93m:[39m [33m[[39m[92m'enum'[39m[32m,[39m [33m[[39m[92m'low'[39m[32m,[39m [92m'below_normal'[39m[32m,[39m [92m'normal'[39m[32m,[39m [92m'above_normal'[39m[32m,[39m [92m'high'[39m[32m,[39m [92m'highest'[39m[33m][39m[33m][39m
         [33m}[39m
       [33m][39m[90m;[39m
       [94mfunction[39m [37mNodejsProcess[39m[90m([39m[90m)[39m[33m{[39m

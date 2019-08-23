@@ -3,6 +3,7 @@ const os = require('os');
 const net = require('net');
 const CPU = require('./monitors/cpu');
 const MEMORY = require('./monitors/memory');
+const OS = require('./monitors/os');
 const PORT = 9000;
 
 global.connections = {};
@@ -10,8 +11,24 @@ global.index = 0;
 global.monitors = [];
 global.metadata = {};
 
+// Ensure the tcp daemon is running with nodejs v10+.
+//
+const version = parseInt(process.version.substring(1).split('.')[0]);
+if (version <= 10) {
+    console.log(`current nodejs version is ${process.version}, please run the tcp daemon with nodejs v10+ in order to use os.setPriority() API ...`);
+    process.exit(1);
+}
+else {
+    console.log(`current nodejs version is ${process.version} => checked.`)
+}
+
+// Configure the current daemon process with PRIORITY_BELOW_NORMAL
+// 
+os.setPriority(os.constants.priority['PRIORITY_BELOW_NORMAL']);
+
 monitors.push(new CPU(1000));
 monitors.push(new MEMORY(3000));
+monitors.push(new OS(5000));
 
 var SERIALIZE_DATA = (evt, token1, token2, payload) => {
     var timestamp = Date.now().toString();

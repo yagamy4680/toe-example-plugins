@@ -57,6 +57,7 @@ class NodejsProcess extends SchemaBaseClass
   os:
     * field: \freeMemory, unit: \bytes  , value: [\int, [0, 4294967296]]
     * field: \uptime    , unit: \seconds, value: [\int, [0, 4294967296]]
+    * field: \priority  , unit: '', writeable: yes, value: [\enum, <[low below_normal normal above_normal high highest]>]
 
   ->
     super!

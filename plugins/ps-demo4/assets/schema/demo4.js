@@ -81,6 +81,11 @@
         field: 'uptime',
         unit: 'seconds',
         value: ['int', [0, 4294967296]]
+      }, {
+        field: 'priority',
+        unit: '',
+        writeable: true,
+        value: ['enum', ['low', 'below_normal', 'normal', 'above_normal', 'high', 'highest']]
       }
     ];
     function NodejsProcess(){

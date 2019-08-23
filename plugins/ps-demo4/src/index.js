@@ -25,6 +25,18 @@ const { MODE_PIPE } = PeripheralService.modes;
  */
 const PIPE_NAME = 'aaa';
 
+/**
+ * Priority constants.
+ */
+const PRIORITY_VALUE_TABLE = [
+    'low',
+    'below_normal',
+    'normal',
+    'above_normal',
+    'high',
+    'highest'
+];
+
 
 class Service extends PeripheralService {
 
@@ -140,6 +152,11 @@ class Service extends PeripheralService {
         var measurement = JSON.parse(payload);
         if (this.pid) {
             this.emitData(this.types[0], this.pid, s_type, s_id, measurement);
+        }
+        if (s_type == "os") {
+            var {priority} = measurement;
+            var name = PRIORITY_VALUE_TABLE[priority];
+            INFO(`${name} <= os/current, priority: ${priority} (${name})`);
         }
     }
 
