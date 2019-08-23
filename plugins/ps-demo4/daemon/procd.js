@@ -26,9 +26,11 @@ else {
 // 
 os.setPriority(os.constants.priority['PRIORITY_BELOW_NORMAL']);
 
-monitors.push(new CPU(1000));
-monitors.push(new MEMORY(3000));
-monitors.push(new OS(5000));
+var osm = new OS(5000);
+
+global.monitors.push(new CPU(1000));
+global.monitors.push(new MEMORY(3000));
+global.monitors.push(osm);
 
 var SERIALIZE_DATA = (evt, token1, token2, payload) => {
     var timestamp = Date.now().toString();
@@ -62,13 +64,64 @@ var BROADCAST = (evt, token1, token2, payload) => {
     }
 };
 
+var HANLDE_INCOMING_PACKET = (connection, evt, token1, token2, payload) => {
+    if (evt == "actuator-action") {
+        var a_type = token1;
+        var a_id = token2;
+        var {action, value} = payload;
+        console.log(`receive actuator request => ${a_type}/${a_id}/${action} => ${value}`);
+        if (a_type == "os" && a_id == "current" && action == "set_priority") {
+            return osm.setPriority(value);
+        }
+    }
+};
+
+var PARSE_RAW_PACKET = (connection, text) => {
+    if ("" == text.trim()) {
+        /** Ignore empty/blank string */
+        return;
+    }
+    // console.log(`incoming packet: ${text}`);
+    var tokens = text.split('\t');
+    var payload = {};
+    // console.log(`incoming packet: (tokenized) => ${JSON.stringify(tokens)}`);
+    var [index, timestamp, evt, token1, token2, records] = tokens;
+    if (records && records != "") {
+        var payload = JSON.parse(records);
+    }
+    var xs = {index, timestamp, evt, token1, token2, records};
+    // console.log(`incoming packet: (parsed) => ${JSON.stringify(xs)}`);
+    return HANLDE_INCOMING_PACKET(connection, evt, token1, token2, payload);
+};
+
 const server = net.createServer({}, (c) => {
     var name = `${c.remoteAddress}:${c.remotePort}`;
+    var queue = [];
     global.connections[name] = c;
     console.log(`client from ${name} connected!!`);
     c.on('end', () => {
         console.log(`client from ${name} disconnected`);
         delete global.connections[name];
+    });
+    c.on('data', (buffer) => {
+        console.log(`incoming ${buffer.length} bytes`);
+        /**
+         * Read all bytes from the TCP connection, and 
+         * recognize packet by detecting `\n` character.
+         */
+        var xs = Array.from(buffer);
+        for (let index = 0; index < xs.length; index++) {
+            const c = xs[index];
+            if (c == 10) {
+                var b = Buffer.from(queue);
+                PARSE_RAW_PACKET(c, b.toString());
+                queue.splice(0, queue.length);
+                continue;
+            }
+            else {
+                queue.push(c);
+            }
+        }
     });
     SEND_PACKET(c, SERIALIZE_COMMENT("hello-world"));
     SEND_PACKET(c, SERIALIZE_DATA('peripheral-updated', process.pid.toString(), process.ppid.toString(), global.metadata));

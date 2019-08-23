@@ -1,4 +1,8 @@
 
+## 0.2.0
+### Added
+- Support actuator action to set process priority
+
 ## 0.1.0
 ### Added
 - Add `peripheral-updated` event to DATA packet in tcp-daemon

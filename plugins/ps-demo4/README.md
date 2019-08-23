@@ -294,6 +294,6 @@ X-Powered-By: Express
 ## TODO
 
 - [x] Change schema name from `demo2` to `demo4`
-- [ ] Add actuator action support to plugin and tcp-daemon
+- [x] Add actuator action support to plugin and tcp-daemon
 - [ ] Add `atPipeDisconnected` event
 - [x] Add peripheral object state update (using same process id as tcp-daemon)

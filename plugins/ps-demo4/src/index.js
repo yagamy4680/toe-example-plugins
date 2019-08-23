@@ -37,6 +37,31 @@ const PRIORITY_VALUE_TABLE = [
     'highest'
 ];
 
+class Sender {
+    constructor(parent) {
+        this.parent = parent;
+        this.index = 0;
+    }
+
+    serialize(evt, token1, token2, payload) {
+        var timestamp = Date.now().toString();
+        var index = this.index.toString();
+        var records = JSON.stringify(payload);
+        var tokens = [index, timestamp, evt, token1, token2, records];
+        var text = tokens.join('\t');
+        this.index = this.index + 1;
+        return text;
+    }
+
+    send(evt, token1, token2, payload) {
+        var text = this.serialize(evt, token1, token2, payload);
+        return this.parent.emitPipeData(PIPE_NAME, `${text}\n`);
+    }
+
+    sendAction(a_type, a_id, action, value) {
+        return this.send('actuator-action', a_type, a_id, {action, value});
+    }
+};
 
 class Service extends PeripheralService {
 
@@ -62,6 +87,7 @@ class Service extends PeripheralService {
                 { name: PIPE_NAME, byline: true }
             ]
         };
+        this.sender = new Sender(this);
         INFO(`name => ${this.name}`);
         INFO(`types => ${JSON.stringify(this.types)}`);
         INFO(`schema => \n${JSON.stringify(this.schema)}`);
@@ -208,7 +234,10 @@ class Service extends PeripheralService {
      *                      when failure, the 1st argument `err` shall be the error object.
      */
     performAction(p_type, p_id, a_type, a_id, action, arg1, arg2, arg3, done) {
-        DBG(`got actuator-request: ${p_type}/${p_id}/${a_type}/${a_id}/${action} => ${arg1}, ${arg2}, ${arg3}`);
+        INFO(`got actuator-request: ${p_type}/${p_id}/${a_type}/${a_id}/${action} => ${arg1}, ${arg2}, ${arg3}`);
+        if (a_type == "os" && a_id == "current") {
+            this.sender.sendAction(a_type, a_id, action, arg1);
+        }
         return done();
     }
 

@@ -33,8 +33,22 @@ class OsMonitor extends BaseMonitor {
         var uptime = os.uptime();
         var p = os.getPriority();
         var priority = this.priority_map[p.toString()];
-        console.log(`os: translate raw value (${p}) to enumeration value (${PRIORITY_VALUE_TABLE[priority]}:${priority})`);
+        console.log(`osm: translate raw value (${p}) to enumeration value (${PRIORITY_VALUE_TABLE[priority]}:${priority})`);
         this.emit('data-updated', 'os', 'current', {freeMemory, uptime, priority});
+    }
+
+    setPriority(priority) {
+        const name = PRIORITY_VALUE_TABLE[priority];
+        const fullname = `PRIORITY_${name.toUpperCase()}`;
+        const v = os.constants.priority[fullname];
+        console.log(`osm: set-priority(${priority} => ${name} => ${fullname} => os.constants.priority: ${v}`);
+        try {
+            os.setPriority(v);
+        } catch (error) {
+            console.log(`failed to set-priority(${priority})`);
+            console.dir(error);            
+        }
+        return;
     }
 }
 
