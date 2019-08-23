@@ -70,14 +70,19 @@ id \t epoch \t evt \t token1 \t token2 \t payload \r\n
 
 Here are supported events in DATA packet:
 
-- `sensor-update`, indicates a DATA packet with sensor udpate event with measurement
+- `sensor-update`, indicates a DATA packet with sensor udpate event with measurement, from tcp-daemon to client.
   - `token1` is the sensor type
   - `token2` is the sensor id
   - `payload` is the measured data for this sensor udpate event
-- `peripheral-updated`, indicates a DATA packet with peripheral object update event
+- `peripheral-updated`, indicates a DATA packet with peripheral object update event, from tcp-daemon to client.
   - `token1` is the peripheral id, that we use `process.pid` as identity of peripheral object
   - `token2` is the ppid.
   - `payload` is the metadata for the peripheral object
+- `actuator-action`, indicates a DATA packet with actuator action request, from client to tcp-daemon
+  - `token1` is the actuator type
+  - `token2` is the actuator id
+  - `payload` is the action request, including 2 fields: `action` is the name of action to perform; `value` is the value to perform action
+
 
 ### Compile Schema
 
@@ -240,7 +245,7 @@ docker run \
 ```
 
 
-And, you can use HTTPie to get sensor data snapshot:
+You can use HTTPie to get sensor data snapshot:
 
 ```text
 $  http -v :6020/api/v3/d
@@ -289,6 +294,40 @@ X-Powered-By: Express
 }
 ```
 
+With schema to specify the writeable field `priority`,
+
+```livescript
+  os:
+    * field: \freeMemory, unit: \bytes  , value: [\int, [0, 4294967296]]
+    * field: \uptime    , unit: \seconds, value: [\int, [0, 4294967296]]
+    * field: \priority  , unit: '', writeable: yes, value: [\enum, <[low below_normal normal above_normal high highest]>]
+```
+
+You can perform an actuator action request to set the priority of TcpDaemon with `PRIORITY_ABOVE_NORMAL` (enum value: 3)
+
+```text
+$  http :6020/api/v3/a/nodejs_process/$(http :6020/api/v3/a/nodejs_process/ | jq -r ".data | .[0]")/os/current/set_priority arg1:=3
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 177
+Content-Type: application/json; charset=utf-8
+Date: Fri, 23 Aug 2019 13:52:13 GMT
+ETag: W/"b1-y7i1auPEjb0I7VZSMhZKwQ"
+X-Powered-By: Express
+
+{
+    "code": 0,
+    "data": {
+        "arg1": 3,
+        "request": "nodejs_process/44004/os/current, set_priority"
+    },
+    "error": null,
+    "message": null,
+    "url": "/api/v3/a/nodejs_process/44004/os/current/set_priority"
+}
+```
+
+Please note, you need to run TcpDaemon with nodejs v10 or above because `os.setPriority` is only available since nodejs v10.
 
 
 ## TODO
