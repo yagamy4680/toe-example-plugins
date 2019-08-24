@@ -14,7 +14,7 @@ global.metadata = {};
 // Ensure the tcp daemon is running with nodejs v10+.
 //
 const version = parseInt(process.version.substring(1).split('.')[0]);
-if (version <= 10) {
+if (version < 10) {
     console.log(`current nodejs version is ${process.version}, please run the tcp daemon with nodejs v10+ in order to use os.setPriority() API ...`);
     process.exit(1);
 }
