@@ -1,0 +1,24 @@
+{
+  "name": "agent-demo4",
+  "author": {
+    "name": "Yagamy",
+    "email": "yagamy@gmail.com"
+  },
+  "description": "A demo agent in ToeAgent plugin framework to listen sensor events from SensorWeb running inside Docker on x86 host environment",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "main": "lib/agent.js",
+  "engines": {
+    "node": "12.x.x",
+    "npm": "6.9.x"
+  },
+  "dependencies": {},
+  "scripts": {
+    "agent": "npm run build\nES6=false ./run-sensorweb3-standalone"
+  },
+  "devDependencies": {},
+  "optionalDependencies": {}
+}

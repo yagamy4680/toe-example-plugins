@@ -1,6 +1,12 @@
 #!/bin/bash
 #
 
+function LIGHT_GREEN {
+	local COLOR='\033[1;32m'
+	local NC='\033[0m'
+	echo -e "${COLOR}$@${NC}"
+}
+
 function check_prerequisites {
 	[ "" == "$(which js-yaml)" ] && echo "please install js-yaml via npm/yarn first" && exit 1
 	[ "" == "$(which jq)" ] && echo "please instann jq first" && exit 1
@@ -17,6 +23,16 @@ function cat_conf_get_value {
 	[ "" == "$1" ] && return
 	local VALUE=$(cat "$0.yml" | js-yaml | jq -r ".$1")
 	echo ${VALUE}
+}
+
+#
+# Disable `blemo` channel when wss connects to SensorWeb.
+#
+function generate_sensorweb3_client_no_blemo {
+cat <<__EOF__
+{
+}
+__EOF__
 }
 
 function run_agent_server {
@@ -52,6 +68,19 @@ function run_agent_server {
 			YAPPS_EXTRA_AGENTS \
 			${OPTS} \
 			"$@"
+}
+
+function run_with_container_box {
+	local ADDR=$1; shift
+	[ "" == "${ADDR}" ] && echo "please specify ip address for the container instance to simulate SensorWeb running on the box, e.g. $(LIGHT_GREEN 192.168.1.100) or $(LIGHT_GREEN host.docker.internal) for docker environment on Mac OS X" && exit 1
+	run_agent_server \
+		-s "system-info.remote=${ADDR}" \
+		-s "communicator.connections.ps_s_data.url=tcp://${ADDR}:6022" \
+		-s "communicator.connections.ps_p_data.url=tcp://${ADDR}:6023" \
+		-s "sensorweb3-client.wss.server=http://${ADDR}:6020" \
+		-s "sensorweb3-client.wss.token=ABCD" \
+		-o "^sensorweb3-client.wss.client_opts:$(generate_sensorweb3_client_no_blemo | base64 ${BASE64_OPTS})" \
+		"$@"
 }
 
 function run_with_remote_box {
@@ -173,7 +202,10 @@ function wrapper {
 	[ "" == "$(which shyaml)" ] && echo "please install shyaml first" && exit 1
 	local OS_NAME=$(uname -s | tr '[A-Z]' '[a-z]')
 	local READLINK_OPTS=""
-	[ "darwin" == "${OS_NAME}" ] || READLINK_OPTS="-f"
+	if [ "darwin" != "${OS_NAME}" ]; then
+		READLINK_OPTS="-f"
+		BASE64_OPTS="-w 0"
+	fi
 	local CURRENT=$(pwd)
 	local SCRIPT_CURRENT_NAME=$(basename $0)
 	local SCRIPT_BASE_NAME=$(basename $(readlink ${READLINK_OPTS} $0))

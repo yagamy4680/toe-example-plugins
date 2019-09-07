@@ -1,0 +1,25 @@
+##
+# Enable or disable tic-client to upload TS (time-series) data 
+# of DG (data gathering subsystem) to cloud.
+#
+TICC_UPLOAD_DG_TS: false
+
+
+##
+# Enable or disable tic-client to upload SS (snapshot) data
+# of DG (data gathering subsystem) to cloud.
+#
+TICC_UPLOAD_DG_SS: false
+
+
+##
+# Enable or disable tic-client to upload PO (peripheral-object) data
+# of DM (device management) to cloud.
+#
+TICC_UPLOAD_DM_PO: false
+
+
+##
+# The Docker image version for ToeAgent
+#
+DOCKER_IMAGE_VERSION: 0.9.7
