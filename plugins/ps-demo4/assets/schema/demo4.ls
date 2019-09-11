@@ -39,7 +39,7 @@ SchemaBaseClass = SCHEMA_BASE_CLASS if SCHEMA_BASE_CLASS?
 /** Please Don't Modify These Lines Above   */
 
 MANIFEST =
-  name: \demo2
+  name: \demo4
   version: \0.0.1
 
 

@@ -37,7 +37,7 @@
     [90m/** --------------------------------------- */[39m
     [90m/** Please Don't Modify These Lines Above   */[39m
     [37mMANIFEST[39m [93m=[39m [33m{[39m
-      [37mname[39m[93m:[39m [92m'demo2'[39m[32m,[39m
+      [37mname[39m[93m:[39m [92m'demo4'[39m[32m,[39m
       [37mversion[39m[93m:[39m [92m'0.0.1'[39m
     [33m}[39m[90m;[39m
     [37mNodejsProcess[39m [93m=[39m [90m([39m[94mfunction[39m[90m([39m[37msuperclass[39m[90m)[39m[33m{[39m

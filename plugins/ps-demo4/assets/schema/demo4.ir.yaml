@@ -1,8 +1,8 @@
 manifest:
   format: 2
-  name: demo2
+  name: demo4
   version: 0.0.1
-  created_at: 2019-08-10T04:01:00.030Z
+  created_at: 2019-09-11T15:31:30.178Z
   checksum: dc1357ac95f6b8a31326d65ed27576a56ce515fe750e8d728b53d005f8ac0c9f
 content:
   peripheral_types:
