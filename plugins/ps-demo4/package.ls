@@ -18,7 +18,7 @@
 
 # package.json
 #
-name: \ps-demo2
+name: \ps-demo4
 
 author:
   name: 'Yagamy'

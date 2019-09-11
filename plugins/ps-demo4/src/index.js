@@ -23,7 +23,7 @@ const { MODE_PIPE } = PeripheralService.modes;
 /**
  * The name of pipe connection (tcp client) to remote Tcp daemon.
  */
-const PIPE_NAME = 'aaa';
+const PIPE_NAME = 'dcd';
 
 /**
  * Priority constants.
