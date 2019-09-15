@@ -3,4 +3,4 @@
 #
 # Since 3.9.1, ES6 with nodejs (8.12.0) is supported.
 #
-DOCKER_IMAGE_VERSION: 4.0.0
+DOCKER_IMAGE_VERSION: 4.0.4
