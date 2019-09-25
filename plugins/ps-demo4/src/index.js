@@ -130,6 +130,18 @@ class Service extends PeripheralService {
     }
 
     /**
+     * Indicates the PIPE with TcpProxy bridge is disconnected. After this callback,
+     * the implementation of PeripheralService cannot receive data from this pipe, 
+     * and shall not send data through this pipe.
+     * 
+     * @param {*} name                  the name of tcp-proxy's bridge
+     * @param {*} metadata              the meta information for the bridge
+     */
+    atPipeDisconnected(name, metadata) {
+        INFO(`${name}: pipe disconnected => ${JSON.stringify(metadata)}`);
+    }
+
+    /**
      * Process the data from pipe, either LINE or BUFFER.
      * 
      * @param {string} name             the name of tcp-proxy's bridge, whose communicator's connection
