@@ -54,6 +54,10 @@ class Sender {
     }
 
     send(evt, token1, token2, payload) {
+        /* Only send data to remote tcp server when the pipe is connected */
+        if (!this.parent.connected) {
+            return;
+        }
         var text = this.serialize(evt, token1, token2, payload);
         return this.parent.emitPipeData(PIPE_NAME, `${text}\n`);
     }
@@ -88,6 +92,7 @@ class Service extends PeripheralService {
             ]
         };
         this.sender = new Sender(this);
+        this.connected = false;
         INFO(`name => ${this.name}`);
         INFO(`types => ${JSON.stringify(this.types)}`);
         INFO(`schema => \n${JSON.stringify(this.schema)}`);
@@ -127,6 +132,7 @@ class Service extends PeripheralService {
      */
     atPipeEstablished(name, metadata) {
         INFO(`${name}: pipe established => ${JSON.stringify(metadata)}`);
+        this.connected = true;
     }
 
     /**
@@ -139,6 +145,8 @@ class Service extends PeripheralService {
      */
     atPipeDisconnected(name, metadata) {
         INFO(`${name}: pipe disconnected => ${JSON.stringify(metadata)}`);
+        this.connected = false;
+        this.emitPeripheralState(this.types[0], this.pid, RELATIONSHIP_CONFIGURED, this.metadata); /* inform sensor-web that the peripheral object is disconnected (out-of-managed) */
     }
 
     /**
@@ -202,6 +210,7 @@ class Service extends PeripheralService {
         var metadata = JSON.parse(payload);
         this.pid = pid;
         this.ppid = ppid;
+        this.metadata = metadata;
         this.emitPeripheralState(this.types[0], this.pid, RELATIONSHIP_MANAGED, metadata);   
     }
 

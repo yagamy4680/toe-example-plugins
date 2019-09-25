@@ -1,4 +1,13 @@
 
+## 0.2.2
+### Added
+- Inform sensor-web the peripheral object is out of manage when receiving `at-pipe-disconnected` event
+- Skip sending data to pipe when the pipe is disconnected
+
+## 0.2.1
+### Added
+- Support `at-pipe-disconnected` event
+
 ## 0.2.0
 ### Added
 - Support actuator action to set process priority
