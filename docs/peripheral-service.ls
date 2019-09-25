@@ -428,6 +428,14 @@ class PeripheralService
   at-pipe-established: (name, metadata) ->
     return
 
+  ##
+  # Indicates the PIPE with TcpProxy bridge is disconnected. After this callback,
+  # the implementation of PeripheralService cannot receive data from this pipe,
+  # and shall not send data through this pipe.
+  #
+  at-pipe-disconnected: (name, metadata) ->
+    return
+
   # Get the current timestamp with internal SystemUptime object when exists. If internal SystemUptime
   # object is null, the function also returns `null`.
   #
