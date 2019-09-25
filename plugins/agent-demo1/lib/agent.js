@@ -46,12 +46,25 @@ class Demo1 extends Agent {
     }
   
     /**
-     * Indicate the Agent is detached from the runtime environment.
+     * Indicate the Agent is detached from the runtime environment. Please note, the detach
+     * process is synchronous so there is no `done` callback function in the function 
+     * prototype.
+     * 
+     * @reason   the reason why the agent instance is forcedly detached from
+     *           runtime environment. Its value might be one of `AGENT_DETACHING_REASON_xxx`
+     *           constants:
+     *              - `AGENT_DETACHING_REASON_MISC`
+     *              - `AGENT_DETACHING_REASON_SWC_DISCONNECTED`
      */
-    detach(done) {
-        return done();
+    detach(reason) {
+        if (reason == Agent.constants.AGENT_DETACHING_REASON_SWC_DISCONNECTED) {
+            INFO(`agent is detached from runtime environment due to swc disconnection (${reason})`);
+        }
+        else {
+            INFO(`agent is detached from runtime environment with unknown reason (${reason})`);
+        }
     }
-
+    
     /**
      * Notify the Agent instance with a sensor data update event that is registered at
      * Agent initiation phase by specify `ps/sensor_events` field in runtime preference
