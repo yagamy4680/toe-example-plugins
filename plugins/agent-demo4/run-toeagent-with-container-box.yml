@@ -22,4 +22,4 @@ TICC_UPLOAD_DM_PO: false
 ##
 # The Docker image version for ToeAgent
 #
-DOCKER_IMAGE_VERSION: 0.9.7
+DOCKER_IMAGE_VERSION: 1.0.0

@@ -1,3 +1,4 @@
+{lodash_merge} = global.get-bundled-modules!
 
 const EVENT_NAMESPACE_DELIMITER = '::'
 
@@ -28,6 +29,18 @@ const DEFAULT_PREFERENCES =
 const PERIPHERAL_RELATIONSHIP_NONE = 0
 const PERIPHERAL_RELATIONSHIP_CONFIGURED = 1
 const PERIPHERAL_RELATIONSHIP_MANAGED = 2
+
+#
+# For any other reason, ToeAgent forcedly detachs the selected agent instance
+# from runtime environment.
+#
+const AGENT_DETACHING_REASON_MISC = 0
+
+#
+# Because SWC (sensor-web-client) is disconnected from SensorWeb, all running
+# agent instances are forcedly detached from runtime environment.
+#
+const AGENT_DETACHING_REASON_SWC_DISCONNECTED = 1
 
 ##
 # Agent base class for implementing any intelligent control logic in TOE device. Developer needs
@@ -280,7 +293,8 @@ const PERIPHERAL_RELATIONSHIP_MANAGED = 2
 class Agent
   @constants = {
     EVENT_NAMESPACE_DELIMITER, DEFAULT_PREFERENCES
-    PERIPHERAL_RELATIONSHIP_NONE, PERIPHERAL_RELATIONSHIP_CONFIGURED, PERIPHERAL_RELATIONSHIP_MANAGED
+    PERIPHERAL_RELATIONSHIP_NONE, PERIPHERAL_RELATIONSHIP_CONFIGURED, PERIPHERAL_RELATIONSHIP_MANAGED,
+    AGENT_DETACHING_REASON_MISC, AGENT_DETACHING_REASON_SWC_DISCONNECTED
   }
   ##
   # Constructor of Agent class, without any argument.
@@ -289,8 +303,7 @@ class Agent
     p = null
     p = amodule.filename if amodule? and not p?
     p = amodule.id if amodule? and not p?
-    @preferences = {}
-    @preferences <<< DEFAULT_PREFERENCES
+    @preferences = lodash_merge {}, DEFAULT_PREFERENCES
     @module_path = p
     return
 
@@ -333,10 +346,18 @@ class Agent
 
 
   ##
-  # Indicate the Agent is detached from the runtime environment.
+  # Indicate the Agent is detached from the runtime environment. Please note, the detach
+  # process is synchronous so there is no `done` callback function in the function
+  # prototype.
   #
-  detach: (done) ->
-    return done null, "please write your implementations here ..."
+  # @reason   the reason why the agent instance is forcedly detached from
+  #           runtime environment. Its value might be one of AGENT_DETACHING_REASON_xxx
+  #           constants.
+  #             - AGENT_DETACHING_REASON_MISC
+  #             - AGENT_DETACHING_REASON_SWC_DISCONNECTED
+  #
+  detach: (reason=AGENT_DETACHING_RATIONALE_MISC) ->
+    return "please write your implementations here ..."
 
 
   ##

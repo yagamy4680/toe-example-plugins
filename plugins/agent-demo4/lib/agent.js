@@ -43,14 +43,28 @@ class Demo4 extends Agent {
         // Write agent's initialization codes here ...
         // 
         this.jarvis = jarvis;
+        INFO(`agent is attached to runtime environment`);
         return done();
     }
   
     /**
-     * Indicate the Agent is detached from the runtime environment.
+     * Indicate the Agent is detached from the runtime environment. Please note, the detach
+     * process is synchronous so there is no `done` callback function in the function 
+     * prototype.
+     * 
+     * @reason   the reason why the agent instance is forcedly detached from
+     *           runtime environment. Its value might be one of `AGENT_DETACHING_REASON_xxx`
+     *           constants:
+     *              - `AGENT_DETACHING_REASON_MISC`
+     *              - `AGENT_DETACHING_REASON_SWC_DISCONNECTED`
      */
-    detach(done) {
-        return done();
+    detach(reason) {
+        if (reason == Agent.constants.AGENT_DETACHING_REASON_SWC_DISCONNECTED) {
+            INFO(`agent is detached from runtime environment due to swc disconnection (${reason})`);
+        }
+        else {
+            INFO(`agent is detached from runtime environment with unknown reason (${reason})`);
+        }
     }
 
     /**
