@@ -128,6 +128,7 @@ docker run \\
 	${CONTAINER_PORT_OPTS} \\
 	$(show_container_app_conf) \\
 	-v ${PLUGIN_DIR}:${PLUGIN_DOCKER_DIR} \\
+	-v /tmp:/tmp \\
 	$(show_container_tic_conf) \\
 	-e ${ENV_OPT_DUMP_CONF} \\
 	-e ${ENV_OPT_PLUGIN} \\
