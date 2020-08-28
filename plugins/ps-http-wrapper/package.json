@@ -1,0 +1,32 @@
+{
+  "name": "ps-demo1",
+  "author": {
+    "name": "Yagamy",
+    "email": "yagamy@gmail.com"
+  },
+  "description": "A demo for peripheral-service in SensorWeb3 plugin framework",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "main": "lib/index.js",
+  "engines": {
+    "node": "0.10.x",
+    "npm": "1.4.x"
+  },
+  "dependencies": {
+    "async": "*"
+  },
+  "scripts": {
+    "build": "rm -vf lib/*.js\necho \"clean up lib directory ...\"\nfind ./lib -name '*.js' | xargs -I{} sh -c \"rm -vf {}\"\necho \"prepare index.js\"\ncp -v ./resources/wrapper.js ./lib/index.js\necho \"producing lib/bundle.js (browserify on ./src/*.js)\"\n./node_modules/browserify/bin/cmd.js \\\n    --node \\\n    --standalone Service \\\n    --outfile lib/bundle.js \\\n    ./src/index.js\necho \"producing lib/bundle.pretty.js (browserify on ./src/*.js)\"\n./node_modules/uglify-es/bin/uglifyjs \\\n    --beautify \\\n    --timings \\\n    --verbose \\\n    --ecma 6 \\\n    -o ./lib/bundle.pretty.js \\\n    ./lib/bundle.js\necho \"producing lib/bundle.min.js (browserify on ./src/*.js)\"\n./node_modules/uglify-es/bin/uglifyjs \\\n    --compress \\\n    --mangle \\\n    --timings \\\n    --verbose \\\n    --ecma 6 \\\n    -o ./lib/bundle.min.js \\\n    ./lib/bundle.js\nls -alh lib/bundle*",
+    "local": "npm run build\nES6=false ./run-sensorweb3-standalone",
+    "src": "ES6=true ./run-sensorweb3-standalone"
+  },
+  "devDependencies": {
+    "browserify-livescript": "^0.2.3",
+    "uglify-es": "^3.3.9",
+    "browserify": "^16.2.2"
+  },
+  "optionalDependencies": {}
+}
